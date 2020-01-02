@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -37,6 +37,7 @@ using namespace std;
 #include <gperftools/profiler.h>
 #endif
 
+#include <unistd.h>
 using namespace std;
 
 #include <srs_kernel_error.hpp>
@@ -49,8 +50,8 @@ using namespace std;
 #include <srs_core_autofree.hpp>
 
 // pre-declare
-int run(SrsServer* svr);
-int run_master(SrsServer* svr);
+srs_error_t run(SrsServer* svr);
+srs_error_t run_master(SrsServer* svr);
 void show_macro_features();
 string srs_getenv(const char* name);
 
@@ -66,9 +67,9 @@ extern const char* _srs_version;
 /**
  * main entrance.
  */
-int main(int argc, char** argv)
+srs_error_t do_main(int argc, char** argv)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     // TODO: support both little and big endian.
     srs_assert(srs_is_little_endian());
@@ -97,37 +98,35 @@ int main(int argc, char** argv)
     
     // never use srs log(srs_trace, srs_error, etc) before config parse the option,
     // which will load the log config and apply it.
-    if ((ret = _srs_config->parse_options(argc, argv)) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = _srs_config->parse_options(argc, argv)) != srs_success) {
+        return srs_error_wrap(err, "config parse options");
     }
     
     // change the work dir and set cwd.
+    int r0 = 0;
     string cwd = _srs_config->get_work_dir();
-    if (!cwd.empty() && cwd != "./" && (ret = chdir(cwd.c_str())) != ERROR_SUCCESS) {
-        srs_error("change cwd to %s failed. ret=%d", cwd.c_str(), ret);
-        return ret;
+    if (!cwd.empty() && cwd != "./" && (r0 = chdir(cwd.c_str())) == -1) {
+        return srs_error_new(-1, "chdir to %s, r0=%d", cwd.c_str(), r0);
     }
-    if ((ret = _srs_config->initialize_cwd()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = _srs_config->initialize_cwd()) != srs_success) {
+        return srs_error_wrap(err, "config cwd");
     }
     
     // config parsed, initialize log.
-    if ((ret = _srs_log->initialize()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = _srs_log->initialize()) != srs_success) {
+        return srs_error_wrap(err, "log initialize");
     }
     
     // config already applied to log.
-    srs_trace(RTMP_SIG_SRS_SERVER ", stable is " RTMP_SIG_SRS_PRIMARY);
-    srs_trace("license: " RTMP_SIG_SRS_LICENSE ", " RTMP_SIG_SRS_COPYRIGHT);
-    srs_trace("authors: " RTMP_SIG_SRS_AUTHROS);
+    srs_trace("%s, %s", RTMP_SIG_SRS_SERVER, RTMP_SIG_SRS_LICENSE);
     srs_trace("contributors: " SRS_AUTO_CONSTRIBUTORS);
-    srs_trace("build: %s, configure:%s, uname: %s", SRS_AUTO_BUILD_DATE, SRS_AUTO_USER_CONFIGURE, SRS_AUTO_UNAME);
+    srs_trace("cwd=%s, work_dir=%s, build: %s, configure: %s, uname: %s",
+        _srs_config->cwd().c_str(), cwd.c_str(), SRS_AUTO_BUILD_DATE, SRS_AUTO_USER_CONFIGURE, SRS_AUTO_UNAME);
     srs_trace("configure detail: " SRS_AUTO_CONFIGURE);
 #ifdef SRS_AUTO_EMBEDED_TOOL_CHAIN
     srs_trace("crossbuild tool chain: " SRS_AUTO_EMBEDED_TOOL_CHAIN);
 #endif
-    srs_trace("cwd=%s, work_dir=%s", _srs_config->cwd().c_str(), cwd.c_str());
-    
+
     // for memory check or detect.
     if (true) {
         stringstream ss;
@@ -171,8 +170,8 @@ int main(int argc, char** argv)
     }
     
     // we check the config when the log initialized.
-    if ((ret = _srs_config->check_config()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = _srs_config->check_config()) != srs_success) {
+        return srs_error_wrap(err, "check config");
     }
     
     // features
@@ -181,16 +180,23 @@ int main(int argc, char** argv)
     SrsServer* svr = new SrsServer();
     SrsAutoFree(SrsServer, svr);
     
-    /**
-     * we do nothing in the constructor of server,
-     * and use initialize to create members, set hooks for instance the reload handler,
-     * all initialize will done in this stage.
-     */
-    if ((ret = svr->initialize(NULL)) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = run(svr)) != srs_success) {
+        return srs_error_wrap(err, "run");
     }
     
-    return run(svr);
+    return err;
+}
+
+int main(int argc, char** argv) {
+    srs_error_t err = do_main(argc, argv);
+    
+    if (err != srs_success) {
+        srs_error("Failed, %s", srs_error_desc(err).c_str());
+    }
+    
+    int ret = srs_error_code(err);
+    srs_freep(err);
+    return ret;
 }
 
 /**
@@ -204,9 +210,9 @@ void show_macro_features()
         ss << "features";
         
         // rch(rtmp complex handshake)
-        ss << ", rch:" << srs_bool2switch(SRS_AUTO_SSL_BOOL);
+        ss << ", rch:" << srs_bool2switch(true);
         ss << ", dash:" << "on";
-        ss << ", hls:" << srs_bool2switch(SRS_AUTO_HLS_BOOL);
+        ss << ", hls:" << srs_bool2switch(true);
         ss << ", hds:" << srs_bool2switch(SRS_AUTO_HDS_BOOL);
         // hc(http callback)
         ss << ", hc:" << srs_bool2switch(true);
@@ -216,18 +222,14 @@ void show_macro_features()
         ss << ", hs:" << srs_bool2switch(true);
         // hp(http parser)
         ss << ", hp:" << srs_bool2switch(true);
-        ss << ", dvr:" << srs_bool2switch(SRS_AUTO_DVR_BOOL);
+        ss << ", dvr:" << srs_bool2switch(true);
         // trans(transcode)
-        ss << ", trans:" << srs_bool2switch(SRS_AUTO_TRANSCODE_BOOL);
+        ss << ", trans:" << srs_bool2switch(true);
         // inge(ingest)
-        ss << ", inge:" << srs_bool2switch(SRS_AUTO_INGEST_BOOL);
-        ss << ", kafka:" << srs_bool2switch(SRS_AUTO_KAFKA_BOOL);
-        ss << ", stat:" << srs_bool2switch(SRS_AUTO_STAT_BOOL);
-        ss << ", nginx:" << srs_bool2switch(SRS_AUTO_NGINX_BOOL);
-        // ff(ffmpeg)
-        ss << ", ff:" << srs_bool2switch(SRS_AUTO_FFMPEG_TOOL_BOOL);
+        ss << ", inge:" << srs_bool2switch(true);
+        ss << ", stat:" << srs_bool2switch(true);
         // sc(stream-caster)
-        ss << ", sc:" << srs_bool2switch(SRS_AUTO_STREAM_CASTER_BOOL);
+        ss << ", sc:" << srs_bool2switch(true);
         srs_trace(ss.str().c_str());
     }
     
@@ -242,12 +244,6 @@ void show_macro_features()
 #endif
 #ifdef SRS_CUBIE
         ss << "CubieBoard";
-#endif
-#ifdef SRS_ARM_UBUNTU12
-        ss << "ARM(build on ubuntu)";
-#endif
-#ifdef SRS_MIPS_UBUNTU12
-        ss << "MIPS(build on ubuntu)";
 #endif
         
 #if defined(__amd64__)
@@ -278,7 +274,7 @@ void show_macro_features()
         stringstream ss;
         
         // mw(merged-write)
-        ss << "mw sleep:" << SRS_PERF_MW_SLEEP << "ms";
+        ss << "mw sleep:" << srsu2msi(SRS_PERF_MW_SLEEP) << "ms";
         
         // mr(merged-read)
         ss << ". mr ";
@@ -287,7 +283,7 @@ void show_macro_features()
 #else
         ss << "enabled:off";
 #endif
-        ss << ", default:" << SRS_PERF_MR_ENABLED << ", sleep:" << SRS_PERF_MR_SLEEP << "ms";
+        ss << ", default:" << SRS_PERF_MR_ENABLED << ", sleep:" << srsu2msi(SRS_PERF_MR_SLEEP) << "ms";
         
         srs_trace(ss.str().c_str());
     }
@@ -298,7 +294,7 @@ void show_macro_features()
         // gc(gop-cache)
         ss << "gc:" << srs_bool2switch(SRS_PERF_GOP_CACHE);
         // pq(play-queue)
-        ss << ", pq:" << SRS_PERF_PLAY_QUEUE << "s";
+        ss << ", pq:" << srsu2msi(SRS_PERF_PLAY_QUEUE) << "ms";
         // cscc(chunk stream cache cid)
         ss << ", cscc:[0," << SRS_PERF_CHUNK_STREAM_CACHE << ")";
         // csa(complex send algorithm)
@@ -331,10 +327,10 @@ void show_macro_features()
     // others
     int possible_mr_latency = 0;
 #ifdef SRS_PERF_MERGED_READ
-    possible_mr_latency = SRS_PERF_MR_SLEEP;
+    possible_mr_latency = srsu2msi(SRS_PERF_MR_SLEEP);
 #endif
-    srs_trace("system default latency in ms: mw(0-%d) + mr(0-%d) + play-queue(0-%d)",
-              SRS_PERF_MW_SLEEP, possible_mr_latency, SRS_PERF_PLAY_QUEUE*1000);
+    srs_trace("system default latency(ms): mw(0-%d) + mr(0-%d) + play-queue(0-%d)",
+              srsu2msi(SRS_PERF_MW_SLEEP), possible_mr_latency, srsu2msi(SRS_PERF_PLAY_QUEUE));
     
 #ifdef SRS_AUTO_MEM_WATCH
 #warning "srs memory watcher will hurts performance. user should kill by SIGTERM or init.d script."
@@ -343,7 +339,7 @@ void show_macro_features()
     
 #if VERSION_MAJOR > VERSION_STABLE
 #warning "Current branch is unstable."
-    srs_warn("Develop is unstable, please use branch: git checkout %s", VERSION_STABLE_BRANCH);
+    srs_warn("Develop is unstable, please use branch: git checkout -b %s origin/%s", VERSION_STABLE_BRANCH, VERSION_STABLE_BRANCH);
 #endif
     
 #if defined(SRS_PERF_SO_SNDBUF_SIZE) && !defined(SRS_PERF_MW_SO_SNDBUF)
@@ -362,28 +358,35 @@ string srs_getenv(const char* name)
     return "";
 }
 
-int run(SrsServer* svr)
+srs_error_t run(SrsServer* svr)
 {
-    // if not deamon, directly run master.
-    if (!_srs_config->get_deamon()) {
-        return run_master(svr);
+    srs_error_t err = srs_success;
+
+    // Initialize the whole system, set hooks to handle server level events.
+    if ((err = svr->initialize(NULL)) != srs_success) {
+        return srs_error_wrap(err, "server initialize");
     }
     
-    srs_trace("start deamon mode...");
+    // If not daemon, directly run master.
+    if (!_srs_config->get_daemon()) {
+        if ((err = run_master(svr)) != srs_success) {
+            return srs_error_wrap(err, "run master");
+        }
+        return srs_success;
+    }
+    
+    srs_trace("start daemon mode...");
     
     int pid = fork();
     
     if(pid < 0) {
-        srs_error("create process error. ret=-1"); //ret=0
-        return -1;
+        return srs_error_new(-1, "fork father process");
     }
     
     // grandpa
     if(pid > 0) {
         int status = 0;
-        if(waitpid(pid, &status, 0) == -1) {
-            srs_error("wait child process error! ret=-1"); //ret=0
-        }
+        waitpid(pid, &status, 0);
         srs_trace("grandpa process exit.");
         exit(0);
     }
@@ -392,57 +395,60 @@ int run(SrsServer* svr)
     pid = fork();
     
     if(pid < 0) {
-        srs_error("create process error. ret=0");
-        return -1;
+        return srs_error_new(-1, "fork child process");
     }
     
     if(pid > 0) {
-        srs_trace("father process exit. ret=0");
+        srs_trace("father process exit");
         exit(0);
     }
     
     // son
-    srs_trace("son(deamon) process running.");
+    srs_trace("son(daemon) process running.");
     
-    return run_master(svr);
+    if ((err = run_master(svr)) != srs_success) {
+        return srs_error_wrap(err, "daemon run master");
+    }
+    
+    return err;
 }
 
-int run_master(SrsServer* svr)
+srs_error_t run_master(SrsServer* svr)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
-    if ((ret = svr->initialize_st()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->initialize_st()) != srs_success) {
+        return srs_error_wrap(err, "initialize st");
     }
     
-    if ((ret = svr->initialize_signal()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->initialize_signal()) != srs_success) {
+        return srs_error_wrap(err, "initialize signal");
     }
     
-    if ((ret = svr->acquire_pid_file()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->acquire_pid_file()) != srs_success) {
+        return srs_error_wrap(err, "acquire pid file");
     }
     
-    if ((ret = svr->listen()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->listen()) != srs_success) {
+        return srs_error_wrap(err, "listen");
     }
     
-    if ((ret = svr->register_signal()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->register_signal()) != srs_success) {
+        return srs_error_wrap(err, "register signal");
     }
     
-    if ((ret = svr->http_handle()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->http_handle()) != srs_success) {
+        return srs_error_wrap(err, "http handle");
     }
     
-    if ((ret = svr->ingest()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->ingest()) != srs_success) {
+        return srs_error_wrap(err, "ingest");
     }
     
-    if ((ret = svr->cycle()) != ERROR_SUCCESS) {
-        return ret;
+    if ((err = svr->cycle()) != srs_success) {
+        return srs_error_wrap(err, "main cycle");
     }
     
-    return 0;
+    return err;
 }
 

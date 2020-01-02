@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,8 +29,6 @@
 #include <string>
 #include <vector>
 
-#ifdef SRS_AUTO_STREAM_CASTER
-
 class SrsConfDirective;
 class SrsHttpServeMux;
 class SrsRtmpClient;
@@ -42,41 +40,38 @@ class SrsFlvDecoder;
 class SrsTcpClient;
 class SrsSimpleRtmpClient;
 
-#include <srs_app_st.hpp>
+#include <srs_app_thread.hpp>
 #include <srs_app_listener.hpp>
 #include <srs_app_conn.hpp>
 #include <srs_app_http_conn.hpp>
 #include <srs_kernel_file.hpp>
 
-/**
- * the stream caster for flv stream over HTTP POST.
- */
+// The stream caster for flv stream over HTTP POST.
 class SrsAppCasterFlv : virtual public ISrsTcpHandler
-, virtual public IConnectionManager, virtual public ISrsHttpHandler
+    , virtual public IConnectionManager, virtual public ISrsHttpHandler
 {
 private:
     std::string output;
     SrsHttpServeMux* http_mux;
     std::vector<SrsHttpConn*> conns;
+    SrsCoroutineManager* manager;
 public:
     SrsAppCasterFlv(SrsConfDirective* c);
     virtual ~SrsAppCasterFlv();
 public:
-    virtual int initialize();
-    // ISrsTcpHandler
+    virtual srs_error_t initialize();
+// Interface ISrsTcpHandler
 public:
-    virtual int on_tcp_client(st_netfd_t stfd);
-    // IConnectionManager
+    virtual srs_error_t on_tcp_client(srs_netfd_t stfd);
+// Interface IConnectionManager
 public:
     virtual void remove(ISrsConnection* c);
-    // ISrsHttpHandler
+// Interface ISrsHttpHandler
 public:
-    virtual int serve_http(ISrsHttpResponseWriter* w, ISrsHttpMessage* r);
+    virtual srs_error_t serve_http(ISrsHttpResponseWriter* w, ISrsHttpMessage* r);
 };
 
-/**
- * the dynamic http connection, never drop the body.
- */
+// The dynamic http connection, never drop the body.
 class SrsDynamicHttpConn : public SrsHttpConn
 {
 private:
@@ -84,20 +79,17 @@ private:
     SrsPithyPrint* pprint;
     SrsSimpleRtmpClient* sdk;
 public:
-    SrsDynamicHttpConn(IConnectionManager* cm, st_netfd_t fd, SrsHttpServeMux* m, std::string cip);
+    SrsDynamicHttpConn(IConnectionManager* cm, srs_netfd_t fd, SrsHttpServeMux* m, std::string cip);
     virtual ~SrsDynamicHttpConn();
 public:
-    virtual int on_got_http_message(ISrsHttpMessage* msg);
+    virtual srs_error_t on_got_http_message(ISrsHttpMessage* msg);
 public:
-    virtual int proxy(ISrsHttpResponseWriter* w, ISrsHttpMessage* r, std::string o);
+    virtual srs_error_t proxy(ISrsHttpResponseWriter* w, ISrsHttpMessage* r, std::string o);
 private:
-    virtual int do_proxy(ISrsHttpResponseReader* rr, SrsFlvDecoder* dec);
+    virtual srs_error_t do_proxy(ISrsHttpResponseReader* rr, SrsFlvDecoder* dec);
 };
 
-/**
- * the http wrapper for file reader,
- * to read http post stream like a file.
- */
+// The http wrapper for file reader, to read http post stream like a file.
 class SrsHttpFileReader : public SrsFileReader
 {
 private:
@@ -106,10 +98,8 @@ public:
     SrsHttpFileReader(ISrsHttpResponseReader* h);
     virtual ~SrsHttpFileReader();
 public:
-    /**
-     * open file reader, can open then close then open...
-     */
-    virtual int open(std::string file);
+    // Open file reader, can open then close then open...
+    virtual srs_error_t open(std::string file);
     virtual void close();
 public:
     // TODO: FIXME: extract interface.
@@ -119,10 +109,9 @@ public:
     virtual int64_t seek2(int64_t offset);
     virtual int64_t filesize();
 public:
-    virtual int read(void* buf, size_t count, ssize_t* pnread);
-    virtual int lseek(off_t offset, int whence, off_t* seeked);
+    virtual srs_error_t read(void* buf, size_t count, ssize_t* pnread);
+    virtual srs_error_t lseek(off_t offset, int whence, off_t* seeked);
 };
 
 #endif
 
-#endif

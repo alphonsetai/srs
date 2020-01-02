@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -70,12 +70,12 @@ public:
     /**
      * encode object to bytes in SrsBuffer.
      */
-    virtual int encode(SrsBuffer* buf) = 0;
+    virtual srs_error_t encode(SrsBuffer* buf) = 0;
 public:
     /**
      * decode object from bytes in SrsBuffer.
      */
-    virtual int decode(SrsBuffer* buf) = 0;
+    virtual srs_error_t decode(SrsBuffer* buf) = 0;
 };
 
 /**
@@ -95,21 +95,11 @@ private:
     int nb_bytes;
 public:
     SrsBuffer();
+    // Initialize buffer with data b and size nb_b.
+    // @remark User must free the data b.
     SrsBuffer(char* b, int nb_b);
     virtual ~SrsBuffer();
-private:
-    virtual void set_value(char* b, int nb_b);
-public:
-    /**
-     * initialize the stream from bytes.
-     * @b, the bytes to convert from/to basic types.
-     * @nb, the size of bytes, total number of bytes for stream.
-     * @remark, stream never free the bytes, user must free it.
-     * @remark, return error when bytes NULL.
-     * @remark, return error when size is not positive.
-     */
-    virtual int initialize(char* b, int nb);
-    // get the status of stream
+// get the status of stream
 public:
     /**
      * get data of stream, set by initialize.
@@ -125,6 +115,8 @@ public:
      * tell the current pos.
      */
     virtual int pos();
+    // Left bytes in buffer, total size() minus the current pos().
+    virtual int left();
     /**
      * whether stream is empty.
      * if empty, user should never read or write.
@@ -216,10 +208,9 @@ private:
     uint8_t cb_left;
     SrsBuffer* stream;
 public:
-    SrsBitBuffer();
+    SrsBitBuffer(SrsBuffer* b);
     virtual ~SrsBitBuffer();
 public:
-    virtual int initialize(SrsBuffer* s);
     virtual bool empty();
     virtual int8_t read_bit();
 };

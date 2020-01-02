@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -29,7 +29,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <sys/wait.h>
-#include <math.h>
+#include <netdb.h>
 
 #ifdef SRS_OSX
 #include <sys/sysctl.h>
@@ -155,17 +155,17 @@ string srs_path_build_timestamp(string template_path)
     return path;
 }
 
-int srs_kill_forced(int& pid)
+srs_error_t srs_kill_forced(int& pid)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     if (pid <= 0) {
-        return ret;
+        return err;
     }
     
     // first, try kill by SIGTERM.
     if (kill(pid, SIGTERM) < 0) {
-        return ERROR_SYSTEM_KILL;
+        return srs_error_new(ERROR_SYSTEM_KILL, "kill");
     }
     
     // wait to quit.
@@ -174,12 +174,12 @@ int srs_kill_forced(int& pid)
         int status = 0;
         pid_t qpid = -1;
         if ((qpid = waitpid(pid, &status, WNOHANG)) < 0) {
-            return ERROR_SYSTEM_KILL;
+            return srs_error_new(ERROR_SYSTEM_KILL, "kill");
         }
         
         // 0 is not quit yet.
         if (qpid == 0) {
-            st_usleep(10 * 1000);
+            srs_usleep(10 * 1000);
             continue;
         }
         
@@ -187,12 +187,12 @@ int srs_kill_forced(int& pid)
         srs_trace("SIGTERM stop process pid=%d ok.", pid);
         pid = -1;
         
-        return ret;
+        return err;
     }
     
     // then, try kill by SIGKILL.
     if (kill(pid, SIGKILL) < 0) {
-        return ERROR_SYSTEM_KILL;
+        return srs_error_new(ERROR_SYSTEM_KILL, "kill");
     }
     
     // wait for the process to quit.
@@ -204,14 +204,14 @@ int srs_kill_forced(int& pid)
     // @remark when we use SIGKILL to kill process, it must be killed,
     //      so we always wait it to quit by infinite loop.
     while (waitpid(pid, &status, 0) < 0) {
-        st_usleep(10 * 1000);
+        srs_usleep(10 * 1000);
         continue;
     }
     
     srs_trace("SIGKILL stop process pid=%d ok.", pid);
     pid = -1;
     
-    return ret;
+    return err;
 }
 
 static SrsRusage _srs_system_rusage;
@@ -235,7 +235,7 @@ void srs_update_system_rusage()
         return;
     }
     
-    _srs_system_rusage.sample_time = srs_get_system_time_ms();
+    _srs_system_rusage.sample_time = srsu2ms(srs_get_system_time());
     
     _srs_system_rusage.ok = true;
 }
@@ -361,7 +361,6 @@ bool get_proc_system_stat(SrsProcSystemStat& r)
     fclose(f);
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
 #endif
     
     r.ok = true;
@@ -400,7 +399,6 @@ bool get_proc_self_stat(SrsProcSelfStat& r)
     fclose(f);
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
 #endif
     
     r.ok = true;
@@ -426,7 +424,7 @@ void srs_update_proc_stat()
             return;
         }
         
-        r.sample_time = srs_get_system_time_ms();
+        r.sample_time = srsu2ms(srs_get_system_time());
         
         // calc usage in percent
         SrsProcSystemStat& o = _srs_system_cpu_system_stat;
@@ -452,7 +450,7 @@ void srs_update_proc_stat()
             return;
         }
         
-        r.sample_time = srs_get_system_time_ms();
+        r.sample_time = srsu2ms(srs_get_system_time());
         
         // calc usage in percent
         SrsProcSelfStat& o = _srs_system_cpu_self_stat;
@@ -504,7 +502,7 @@ bool srs_get_disk_vmstat_stat(SrsDiskStat& r)
         return false;
     }
     
-    r.sample_time = srs_get_system_time_ms();
+    r.sample_time = srsu2ms(srs_get_system_time());
     
     static char buf[1024];
     while (fgets(buf, sizeof(buf), f)) {
@@ -519,7 +517,6 @@ bool srs_get_disk_vmstat_stat(SrsDiskStat& r)
     fclose(f);
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
 #endif
     
     r.ok = true;
@@ -530,7 +527,7 @@ bool srs_get_disk_vmstat_stat(SrsDiskStat& r)
 bool srs_get_disk_diskstats_stat(SrsDiskStat& r)
 {
     r.ok = true;
-    r.sample_time = srs_get_system_time_ms();
+    r.sample_time = srsu2ms(srs_get_system_time());
     
     // if disabled, ignore all devices.
     SrsConfDirective* conf = _srs_config->get_stats_disk_device();
@@ -605,7 +602,6 @@ bool srs_get_disk_diskstats_stat(SrsDiskStat& r)
     fclose(f);
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
 #endif
     
     r.ok = true;
@@ -727,10 +723,9 @@ void srs_update_meminfo()
     fclose(f);
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
 #endif
     
-    r.sample_time = srs_get_system_time_ms();
+    r.sample_time = srsu2ms(srs_get_system_time());
     r.MemActive = r.MemTotal - r.MemFree;
     r.RealInUse = r.MemActive - r.Buffers - r.Cached;
     r.NotInUse = r.MemTotal - r.RealInUse;
@@ -794,7 +789,7 @@ void srs_update_platform_info()
 {
     SrsPlatformInfo& r = _srs_system_platform_info;
     
-    r.srs_startup_time = srs_get_system_startup_time_ms();
+    r.srs_startup_time = srsu2ms(srs_get_system_startup_time());
     
 #ifndef SRS_OSX
     if (true) {
@@ -939,7 +934,7 @@ void srs_update_network_devices()
             _nb_srs_system_network_devices = i + 1;
             srs_info("scan network device ifname=%s, total=%d", r.name, _nb_srs_system_network_devices);
             
-            r.sample_time = srs_get_system_time_ms();
+            r.sample_time = srsu2ms(srs_get_system_time());
             r.ok = true;
         }
         
@@ -947,7 +942,6 @@ void srs_update_network_devices()
     }
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
 #endif
 }
 
@@ -1028,7 +1022,6 @@ void srs_update_rtmp_server(int nb_conn, SrsKbps* kbps)
     }
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
     nb_socks = 0;
     nb_tcp4_hashed = 0;
     nb_tcp_orphans = 0;
@@ -1072,7 +1065,6 @@ void srs_update_rtmp_server(int nb_conn, SrsKbps* kbps)
     }
 #else
     // TODO: FIXME: impelments it.
-    // Fuck all of you who use osx for a long time and never patch the osx features for srs.
 #endif
     
     // @see: https://github.com/shemminger/iproute2/blob/master/misc/ss.c
@@ -1089,7 +1081,7 @@ void srs_update_rtmp_server(int nb_conn, SrsKbps* kbps)
         r.ok = true;
         
         r.nb_conn_srs = nb_conn;
-        r.sample_time = srs_get_system_time_ms();
+        r.sample_time = srsu2ms(srs_get_system_time());
         
         r.rbytes = kbps->get_recv_bytes();
         r.rkbps = kbps->get_recv_kbps();
@@ -1105,85 +1097,64 @@ void srs_update_rtmp_server(int nb_conn, SrsKbps* kbps)
 
 string srs_get_local_ip(int fd)
 {
-    std::string ip;
-    
     // discovery client information
-    sockaddr_in addr;
+    sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
     if (getsockname(fd, (sockaddr*)&addr, &addrlen) == -1) {
-        return ip;
+        return "";
     }
-    srs_verbose("get local ip success.");
-    
-    // ip v4 or v6
-    char buf[INET6_ADDRSTRLEN];
-    memset(buf, 0, sizeof(buf));
-    
-    if ((inet_ntop(addr.sin_family, &addr.sin_addr, buf, sizeof(buf))) == NULL) {
-        return ip;
+
+    char saddr[64];
+    char* h = (char*)saddr;
+    socklen_t nbh = (socklen_t)sizeof(saddr);
+    const int r0 = getnameinfo((const sockaddr*)&addr, addrlen, h, nbh,NULL, 0, NI_NUMERICHOST);
+    if(r0) {
+        return "";
     }
-    
-    ip = buf;
-    
-    srs_verbose("get local ip of client ip=%s, fd=%d", buf, fd);
-    
-    return ip;
+
+    return std::string(saddr);
 }
 
 int srs_get_local_port(int fd)
 {
     // discovery client information
-    sockaddr_in addr;
+    sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
     if (getsockname(fd, (sockaddr*)&addr, &addrlen) == -1) {
         return 0;
     }
-    srs_verbose("get local ip success.");
-    
-    int port = ntohs(addr.sin_port);
-    
-    srs_verbose("get local ip of client port=%s, fd=%d", port, fd);
-    
+
+    int port = 0;
+    switch(addr.ss_family) {
+        case AF_INET:
+            port = ntohs(((sockaddr_in*)&addr)->sin_port);
+         break;
+        case AF_INET6:
+            port = ntohs(((sockaddr_in6*)&addr)->sin6_port);
+         break;
+    }
+
     return port;
 }
 
 string srs_get_peer_ip(int fd)
 {
-    std::string ip;
-    
     // discovery client information
-    sockaddr_in addr;
+    sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
-    if (getpeername(fd, (sockaddr*)&addr, &addrlen) == -1) {
-        return ip;
+    if (getsockname(fd, (sockaddr*)&addr, &addrlen) == -1) {
+        return "";
     }
-    srs_verbose("get peer name success.");
-    
-    // ip v4 or v6
-    char buf[INET6_ADDRSTRLEN];
-    memset(buf, 0, sizeof(buf));
-    
-    if ((inet_ntop(addr.sin_family, &addr.sin_addr, buf, sizeof(buf))) == NULL) {
-        return ip;
-    }
-    srs_verbose("get peer ip of client ip=%s, fd=%d", buf, fd);
-    
-    ip = buf;
-    
-    srs_verbose("get peer ip success. ip=%s, fd=%d", ip.c_str(), fd);
-    
-    return ip;
-}
 
-bool srs_is_digit_number(const string& str)
-{
-    if (str.empty()) {
-        return false;
+    char saddr[64];
+    char* h = (char*)saddr;
+    socklen_t nbh = (socklen_t)sizeof(saddr);
+    const int r0 = getnameinfo((const sockaddr*)&addr, addrlen, h, nbh, NULL, 0, NI_NUMERICHOST);
+    if(r0) {
+        return "";
     }
-    
-    int v = ::atoi(str.c_str());
-    int powv = (int)pow(10, str.length() - 1);
-    return  v / powv >= 1 && v / powv <= 9;
+
+    return std::string(saddr);
 }
 
 bool srs_is_boolean(const string& str)
@@ -1208,7 +1179,7 @@ void srs_api_dump_summaries(SrsJsonObject* obj)
         self_mem_percent = (float)(r->r.ru_maxrss / (double)m->MemTotal);
     }
     
-    int64_t now = srs_get_system_time_ms();
+    int64_t now = srsu2ms(srs_get_system_time());
     double srs_uptime = (now - p->srs_startup_time) / 100 / 10.0;
     
     int64_t n_sample_time = 0;

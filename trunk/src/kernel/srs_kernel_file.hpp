@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -35,6 +35,8 @@
 #include <sys/uio.h>
 #endif
 
+class SrsFileReader;
+
 /**
  * file writer, to write to file.
  */
@@ -51,12 +53,12 @@ public:
      * open file writer, in truncate mode.
      * @param p a string indicates the path of file to open.
      */
-    virtual int open(std::string p);
+    virtual srs_error_t open(std::string p);
     /**
      * open file writer, in append mode.
      * @param p a string indicates the path of file to open.
      */
-    virtual int open_append(std::string p);
+    virtual srs_error_t open_append(std::string p);
     /**
      * close current writer.
      * @remark user can reopen again.
@@ -68,9 +70,19 @@ public:
     virtual int64_t tellg();
 // Interface ISrsWriteSeeker
 public:
-    virtual int write(void* buf, size_t count, ssize_t* pnwrite);
-    virtual int writev(const iovec* iov, int iovcnt, ssize_t* pnwrite);
-    virtual int lseek(off_t offset, int whence, off_t* seeked);
+    virtual srs_error_t write(void* buf, size_t count, ssize_t* pnwrite);
+    virtual srs_error_t writev(const iovec* iov, int iovcnt, ssize_t* pnwrite);
+    virtual srs_error_t lseek(off_t offset, int whence, off_t* seeked);
+};
+
+// The file reader factory.
+class ISrsFileReaderFactory
+{
+public:
+    ISrsFileReaderFactory();
+    virtual ~ISrsFileReaderFactory();
+public:
+    virtual SrsFileReader* create_file_reader();
 };
 
 /**
@@ -89,7 +101,7 @@ public:
      * open file reader.
      * @param p a string indicates the path of file to open.
      */
-    virtual int open(std::string p);
+    virtual srs_error_t open(std::string p);
     /**
      * close current reader.
      * @remark user can reopen again.
@@ -104,9 +116,16 @@ public:
     virtual int64_t filesize();
 // Interface ISrsReadSeeker
 public:
-    virtual int read(void* buf, size_t count, ssize_t* pnread);
-    virtual int lseek(off_t offset, int whence, off_t* seeked);
+    virtual srs_error_t read(void* buf, size_t count, ssize_t* pnread);
+    virtual srs_error_t lseek(off_t offset, int whence, off_t* seeked);
 };
+
+// For utest to mock it.
+typedef int (*_srs_open_t)(const char* path, int oflag, ...);
+typedef ssize_t (*_srs_write_t)(int fildes, const void* buf, size_t nbyte);
+typedef ssize_t (*_srs_read_t)(int fildes, void* buf, size_t nbyte);
+typedef off_t (*_srs_lseek_t)(int fildes, off_t offset, int whence);
+typedef int (*_srs_close_t)(int fildes);
 
 #endif
 

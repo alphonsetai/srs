@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,9 +26,7 @@
 
 #include <srs_core.hpp>
 
-#ifdef SRS_AUTO_STREAM_CASTER
-
-struct sockaddr_in;
+struct sockaddr;
 #include <string>
 #include <map>
 
@@ -50,15 +48,13 @@ class SrsSimpleRtmpClient;
 #include <srs_kernel_ts.hpp>
 #include <srs_app_listener.hpp>
 
-/**
- * the queue for mpegts over udp to send packets.
- * for the aac in mpegts contains many flv packets in a pes packet,
- * we must recalc the timestamp.
- */
+// The queue for mpegts over udp to send packets.
+// For the aac in mpegts contains many flv packets in a pes packet,
+// we must recalc the timestamp.
 class SrsMpegtsQueue
 {
 private:
-    // key: dts, value: msg.
+    // The key: dts, value: msg.
     std::map<int64_t, SrsSharedPtrMessage*> msgs;
     int nb_audios;
     int nb_videos;
@@ -66,18 +62,14 @@ public:
     SrsMpegtsQueue();
     virtual ~SrsMpegtsQueue();
 public:
-    virtual int push(SrsSharedPtrMessage* msg);
+    virtual srs_error_t push(SrsSharedPtrMessage* msg);
     virtual SrsSharedPtrMessage* dequeue();
 };
 
-/**
- * the mpegts over udp stream caster.
- */
-class SrsMpegtsOverUdp : virtual public ISrsTsHandler
-, virtual public ISrsUdpHandler
+// The mpegts over udp stream caster.
+class SrsMpegtsOverUdp : virtual public ISrsTsHandler, virtual public ISrsUdpHandler
 {
 private:
-    SrsBuffer* stream;
     SrsTsContext* context;
     SrsSimpleStream* buffer;
     std::string output;
@@ -99,29 +91,28 @@ private:
 public:
     SrsMpegtsOverUdp(SrsConfDirective* c);
     virtual ~SrsMpegtsOverUdp();
-// interface ISrsUdpHandler
+// Interface ISrsUdpHandler
 public:
-    virtual int on_udp_packet(sockaddr_in* from, char* buf, int nb_buf);
+    virtual srs_error_t on_udp_packet(const sockaddr* from, const int fromlen, char* buf, int nb_buf);
 private:
-    virtual int on_udp_bytes(std::string host, int port, char* buf, int nb_buf);
-// interface ISrsTsHandler
+    virtual srs_error_t on_udp_bytes(std::string host, int port, char* buf, int nb_buf);
+// Interface ISrsTsHandler
 public:
-    virtual int on_ts_message(SrsTsMessage* msg);
+    virtual srs_error_t on_ts_message(SrsTsMessage* msg);
 private:
-    virtual int on_ts_video(SrsTsMessage* msg, SrsBuffer* avs);
-    virtual int write_h264_sps_pps(uint32_t dts, uint32_t pts);
-    virtual int write_h264_ipb_frame(char* frame, int frame_size, uint32_t dts, uint32_t pts);
-    virtual int on_ts_audio(SrsTsMessage* msg, SrsBuffer* avs);
-    virtual int write_audio_raw_frame(char* frame, int frame_size, SrsRawAacStreamCodec* codec, uint32_t dts);
+    virtual srs_error_t on_ts_video(SrsTsMessage* msg, SrsBuffer* avs);
+    virtual srs_error_t write_h264_sps_pps(uint32_t dts, uint32_t pts);
+    virtual srs_error_t write_h264_ipb_frame(char* frame, int frame_size, uint32_t dts, uint32_t pts);
+    virtual srs_error_t on_ts_audio(SrsTsMessage* msg, SrsBuffer* avs);
+    virtual srs_error_t write_audio_raw_frame(char* frame, int frame_size, SrsRawAacStreamCodec* codec, uint32_t dts);
 private:
-    virtual int rtmp_write_packet(char type, uint32_t timestamp, char* data, int size);
+    virtual srs_error_t rtmp_write_packet(char type, uint32_t timestamp, char* data, int size);
 private:
     // Connect to RTMP server.
-    virtual int connect();
+    virtual srs_error_t connect();
     // Close the connection to RTMP server.
     virtual void close();
 };
 
 #endif
 
-#endif

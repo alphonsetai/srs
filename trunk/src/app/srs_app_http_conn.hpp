@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -55,9 +55,7 @@ class SrsHttpMessage;
 class SrsHttpStreamServer;
 class SrsHttpStaticServer;
 
-/**
- * The http connection which request the static or stream content.
- */
+// The http connection which request the static or stream content.
 class SrsHttpConn : public SrsConnection
 {
 protected:
@@ -65,41 +63,34 @@ protected:
     ISrsHttpServeMux* http_mux;
     SrsHttpCorsMux* cors;
 public:
-    SrsHttpConn(IConnectionManager* cm, st_netfd_t fd, ISrsHttpServeMux* m, std::string cip);
+    SrsHttpConn(IConnectionManager* cm, srs_netfd_t fd, ISrsHttpServeMux* m, std::string cip);
     virtual ~SrsHttpConn();
-// interface IKbpsDelta
+// Interface ISrsKbpsDelta
 public:
-    virtual void resample();
-    virtual int64_t get_send_bytes_delta();
-    virtual int64_t get_recv_bytes_delta();
-    virtual void cleanup();
+    virtual void remark(int64_t* in, int64_t* out);
 protected:
-    virtual int do_cycle();
+    virtual srs_error_t do_cycle();
 protected:
-    // when got http message,
+    // When got http message,
     // for the static service or api, discard any body.
     // for the stream caster, for instance, http flv streaming, may discard the flv header or not.
-    virtual int on_got_http_message(ISrsHttpMessage* msg) = 0;
+    virtual srs_error_t on_got_http_message(ISrsHttpMessage* msg) = 0;
 private:
-    virtual int process_request(ISrsHttpResponseWriter* w, ISrsHttpMessage* r);
-    /**
-     * when the connection disconnect, call this method.
-     * e.g. log msg of connection and report to other system.
-     * @param request: request which is converted by the last http message.
-     */
-    virtual int on_disconnect(SrsRequest* req);
-// interface ISrsReloadHandler
+    virtual srs_error_t process_request(ISrsHttpResponseWriter* w, ISrsHttpMessage* r);
+    // When the connection disconnect, call this method.
+    // e.g. log msg of connection and report to other system.
+    // @param request: request which is converted by the last http message.
+    virtual srs_error_t on_disconnect(SrsRequest* req);
+// Interface ISrsReloadHandler
 public:
-    virtual int on_reload_http_stream_crossdomain();
+    virtual srs_error_t on_reload_http_stream_crossdomain();
 };
 
-/**
- * drop body of request, only process the response.
- */
+// Drop body of request, only process the response.
 class SrsResponseOnlyHttpConn : public SrsHttpConn
 {
 public:
-    SrsResponseOnlyHttpConn(IConnectionManager* cm, st_netfd_t fd, ISrsHttpServeMux* m, std::string cip);
+    SrsResponseOnlyHttpConn(IConnectionManager* cm, srs_netfd_t fd, ISrsHttpServeMux* m, std::string cip);
     virtual ~SrsResponseOnlyHttpConn();
 public:
     // Directly read a HTTP request message.
@@ -107,14 +98,12 @@ public:
     // serving it, but we need to start a thread to read message to detect whether FD is closed.
     // @see https://github.com/ossrs/srs/issues/636#issuecomment-298208427
     // @remark Should only used in HTTP-FLV streaming connection.
-    virtual int pop_message(ISrsHttpMessage** preq);
+    virtual srs_error_t pop_message(ISrsHttpMessage** preq);
 public:
-    virtual int on_got_http_message(ISrsHttpMessage* msg);
+    virtual srs_error_t on_got_http_message(ISrsHttpMessage* msg);
 };
 
-/**
- * the http server, use http stream or static server to serve requests.
- */
+// The http server, use http stream or static server to serve requests.
 class SrsHttpServer : public ISrsHttpServeMux
 {
 private:
@@ -125,13 +114,12 @@ public:
     SrsHttpServer(SrsServer* svr);
     virtual ~SrsHttpServer();
 public:
-    virtual int initialize();
-    // ISrsHttpServeMux
+    virtual srs_error_t initialize();
+// Interface ISrsHttpServeMux
 public:
-    virtual int serve_http(ISrsHttpResponseWriter* w, ISrsHttpMessage* r);
-    // http flv/ts/mp3/aac stream
+    virtual srs_error_t serve_http(ISrsHttpResponseWriter* w, ISrsHttpMessage* r);
 public:
-    virtual int http_mount(SrsSource* s, SrsRequest* r);
+    virtual srs_error_t http_mount(SrsSource* s, SrsRequest* r);
     virtual void http_unmount(SrsSource* s, SrsRequest* r);
 };
 

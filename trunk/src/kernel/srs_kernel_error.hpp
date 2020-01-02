@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -26,13 +26,15 @@
 
 #include <srs_core.hpp>
 
-// for srs-librtmp, @see https://github.com/ossrs/srs/issues/213
+#include <string>
+
+// For srs-librtmp, @see https://github.com/ossrs/srs/issues/213
 #ifndef _WIN32
 #define ERROR_SUCCESS                       0
 #endif
 
 ///////////////////////////////////////////////////////
-// system error.
+// The system error.
 ///////////////////////////////////////////////////////
 #define ERROR_SOCKET_CREATE                 1000
 #define ERROR_SOCKET_SETREUSE               1001
@@ -77,7 +79,7 @@
 #define ERROR_SYSTEM_PID_SET_FILE_INFO      1040
 #define ERROR_SYSTEM_FILE_ALREADY_OPENED    1041
 #define ERROR_SYSTEM_FILE_OPENE             1042
-#define ERROR_SYSTEM_FILE_CLOSE             1043
+//#define ERROR_SYSTEM_FILE_CLOSE             1043
 #define ERROR_SYSTEM_FILE_READ              1044
 #define ERROR_SYSTEM_FILE_WRITE             1045
 #define ERROR_SYSTEM_FILE_EOF               1046
@@ -103,6 +105,19 @@
 #define ERROR_SYSTEM_DNS_RESOLVE            1066
 #define ERROR_SYSTEM_FRAGMENT_UNLINK        1067
 #define ERROR_SYSTEM_FRAGMENT_RENAME        1068
+#define ERROR_THREAD_DISPOSED               1069
+#define ERROR_THREAD_INTERRUPED             1070
+#define ERROR_THREAD_TERMINATED             1071
+#define ERROR_THREAD_DUMMY                  1072
+#define ERROR_ASPROCESS_PPID                1073
+#define ERROR_EXCEED_CONNECTIONS            1074
+#define ERROR_SOCKET_SETKEEPALIVE           1075
+#define ERROR_SOCKET_NO_NODELAY             1076
+#define ERROR_SOCKET_SNDBUF                 1077
+#define ERROR_THREAD_STARTED                1078
+#define ERROR_SOCKET_SETREUSEADDR           1079
+#define ERROR_SOCKET_SETCLOSEEXEC           1080
+#define ERROR_SOCKET_ACCEPT                 1081
 
 ///////////////////////////////////////////////////////
 // RTMP protocol error.
@@ -159,19 +174,23 @@
 #define ERROR_RTMP_CLIENT_NOT_FOUND         2049
 #define ERROR_OpenSslCreateHMAC             2050
 #define ERROR_RTMP_STREAM_NAME_EMPTY        2051
-//                                           
-// system control message,
-// not an error, but special control logic.
+#define ERROR_HTTP_HIJACK                   2052
+#define ERROR_RTMP_MESSAGE_CREATE           2053
+#define ERROR_RTMP_PROXY_EXCEED             2054
+#define ERROR_RTMP_CREATE_STREAM_DEPTH      2055
 //
-// connection is redirect to another server.
+// The system control message,
+// It's not an error, but special control logic.
+//
+// When connection is redirect to another server.
 #define ERROR_CONTROL_REDIRECT              2997
-// sys ctl: rtmp close stream, support replay.
+// For sys ctl: rtmp close stream, support replay.
 #define ERROR_CONTROL_RTMP_CLOSE            2998
-// FMLE stop publish and republish.
+// When FMLE stop publish and republish.
 #define ERROR_CONTROL_REPUBLISH             2999
 
 ///////////////////////////////////////////////////////
-// application level
+// The application level errors.
 ///////////////////////////////////////////////////////
 #define ERROR_HLS_METADATA                  3000
 #define ERROR_HLS_DECODE_ERROR              3001
@@ -262,9 +281,12 @@
 #define ERROR_MP4_ASC_CHANGE                3086
 #define ERROR_DASH_WRITE_FAILED             3087
 #define ERROR_TS_CONTEXT_NOT_READY          3088
+#define ERROR_MP4_ILLEGAL_MOOF              3089
+#define ERROR_OCLUSTER_DISCOVER             3090
+#define ERROR_OCLUSTER_REDIRECT             3091
 
 ///////////////////////////////////////////////////////
-// HTTP/StreamCaster/KAFKA protocol error.
+// HTTP/StreamCaster protocol error.
 ///////////////////////////////////////////////////////
 #define ERROR_HTTP_PATTERN_EMPTY            4000
 #define ERROR_HTTP_PATTERN_DUPLICATED       4001
@@ -296,15 +318,9 @@
 #define ERROR_AVC_NALU_UEV                  4027
 #define ERROR_AAC_BYTES_INVALID             4028
 #define ERROR_HTTP_REQUEST_EOF              4029
-#define ERROR_KAFKA_CODEC_STRING            4030
-#define ERROR_KAFKA_CODEC_BYTES             4031
-#define ERROR_KAFKA_CODEC_REQUEST           4032
-#define ERROR_KAFKA_CODEC_RESPONSE          4033
-#define ERROR_KAFKA_CODEC_ARRAY             4034
-#define ERROR_KAFKA_CODEC_METADATA          4035
-#define ERROR_KAFKA_CODEC_MESSAGE           4036
-#define ERROR_KAFKA_CODEC_PRODUCER          4037
 #define ERROR_HTTP_302_INVALID              4038
+#define ERROR_BASE64_DECODE                 4039
+#define ERROR_HTTP_STREAM_EOF               4040
 
 ///////////////////////////////////////////////////////
 // HTTP API error.
@@ -312,32 +328,62 @@
 //#define ERROR_API_METHOD_NOT_ALLOWD
 
 ///////////////////////////////////////////////////////
-// user-define error.
+// For user-define error.
 ///////////////////////////////////////////////////////
 #define ERROR_USER_START                    9000
-#define ERROR_USER_DISCONNECT               9001
+//#define ERROR_USER_DISCONNECT               9001
 #define ERROR_SOURCE_NOT_FOUND              9002
 #define ERROR_USER_END                      9999
 
-/**
- * whether the error code is an system control error.
- */
-extern bool srs_is_system_control_error(int error_code);
-extern bool srs_is_client_gracefully_close(int error_code);
+// Whether the error code is an system control error.
+// TODO: FIXME: Remove it from underlayer for confused with error and logger.
+extern bool srs_is_system_control_error(srs_error_t err);
+// It's closed by client.
+extern bool srs_is_client_gracefully_close(srs_error_t err);
+// It's closed by server, such as streaming EOF.
+extern bool srs_is_server_gracefully_close(srs_error_t err);
 
-/**
- @remark: use column copy to generate the new error codes.
- 01234567890
- 01234567891
- 01234567892
- 01234567893
- 01234567894
- 01234567895
- 01234567896
- 01234567897
- 01234567898
- 01234567899
- */
+// The complex error carries code, message, callstack and instant variables,
+// which is more strong and easy to locate problem by log,
+// please @read https://github.com/ossrs/srs/issues/913
+class SrsCplxError
+{
+private:
+    int code;
+    SrsCplxError* wrapped;
+    std::string msg;
+    
+    std::string func;
+    std::string file;
+    int line;
+    
+    int cid;
+    int rerrno;
+    
+    std::string desc;
+private:
+    SrsCplxError();
+public:
+    virtual ~SrsCplxError();
+private:
+    virtual std::string description();
+public:
+    static SrsCplxError* create(const char* func, const char* file, int line, int code, const char* fmt, ...);
+    static SrsCplxError* wrap(const char* func, const char* file, int line, SrsCplxError* err, const char* fmt, ...);
+    static SrsCplxError* success();
+    static SrsCplxError* copy(SrsCplxError* from);
+    static std::string description(SrsCplxError* err);
+    static int error_code(SrsCplxError* err);
+};
+
+// Error helpers, should use these functions to new or wrap an error.
+#define srs_success SrsCplxError::success()
+#define srs_error_new(ret, fmt, ...) SrsCplxError::create(__FUNCTION__, __FILE__, __LINE__, ret, fmt, ##__VA_ARGS__)
+#define srs_error_wrap(err, fmt, ...) SrsCplxError::wrap(__FUNCTION__, __FILE__, __LINE__, err, fmt, ##__VA_ARGS__)
+#define srs_error_copy(err) SrsCplxError::copy(err)
+#define srs_error_desc(err) SrsCplxError::description(err)
+#define srs_error_code(err) SrsCplxError::error_code(err)
+#define srs_error_reset(err) srs_freep(err); err = srs_success
 
 #endif
 

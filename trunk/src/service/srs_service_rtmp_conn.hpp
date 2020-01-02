@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -35,57 +35,57 @@ class SrsCommonMessage;
 class SrsSharedPtrMessage;
 class SrsPacket;
 class SrsKbps;
+class SrsWallClock;
 
-/**
- * The simple RTMP client, provides friendly APIs.
- * @remark Should never use client when closed.
- * Usage:
- *      SrsBasicRtmpClient client("rtmp://127.0.0.1:1935/live/livestream", 3000, 9000);
- *      client.connect();
- *      client.play();
- *      client.close();
- */
+// The simple RTMP client, provides friendly APIs.
+// @remark Should never use client when closed.
+// Usage:
+//      SrsBasicRtmpClient client("rtmp://127.0.0.1:1935/live/livestream", 3000, 9000);
+//      client.connect();
+//      client.play();
+//      client.close();
 class SrsBasicRtmpClient
 {
 private:
     std::string url;
-    int64_t connect_timeout;
-    int64_t stream_timeout;
+    srs_utime_t connect_timeout;
+    srs_utime_t stream_timeout;
 protected:
     SrsRequest* req;
 private:
     SrsTcpClient* transport;
     SrsRtmpClient* client;
     SrsKbps* kbps;
+    SrsWallClock* clk;
     int stream_id;
 public:
     // Constructor.
     // @param u The RTMP url, for example, rtmp://ip:port/app/stream?domain=vhost
-    // @param ctm The timeout in ms to connect to server.
-    // @param stm The timeout in ms to delivery A/V stream.
-    SrsBasicRtmpClient(std::string u, int64_t ctm, int64_t stm);
+    // @param ctm The timeout in srs_utime_t to connect to server.
+    // @param stm The timeout in srs_utime_t to delivery A/V stream.
+    SrsBasicRtmpClient(std::string u, srs_utime_t ctm, srs_utime_t stm);
     virtual ~SrsBasicRtmpClient();
 public:
     // Connect, handshake and connect app to RTMP server.
     // @remark We always close the transport.
-    virtual int connect();
+    virtual srs_error_t connect();
     virtual void close();
 protected:
-    virtual int connect_app();
-    virtual int do_connect_app(std::string local_ip, bool debug);
+    virtual srs_error_t connect_app();
+    virtual srs_error_t do_connect_app(std::string local_ip, bool debug);
 public:
-    virtual int publish();
-    virtual int play();
+    virtual srs_error_t publish(int chunk_size);
+    virtual srs_error_t play(int chunk_size);
     virtual void kbps_sample(const char* label, int64_t age);
     virtual void kbps_sample(const char* label, int64_t age, int msgs);
     virtual int sid();
 public:
-    virtual int recv_message(SrsCommonMessage** pmsg);
-    virtual int decode_message(SrsCommonMessage* msg, SrsPacket** ppacket);
-    virtual int send_and_free_messages(SrsSharedPtrMessage** msgs, int nb_msgs);
-    virtual int send_and_free_message(SrsSharedPtrMessage* msg);
+    virtual srs_error_t recv_message(SrsCommonMessage** pmsg);
+    virtual srs_error_t decode_message(SrsCommonMessage* msg, SrsPacket** ppacket);
+    virtual srs_error_t send_and_free_messages(SrsSharedPtrMessage** msgs, int nb_msgs);
+    virtual srs_error_t send_and_free_message(SrsSharedPtrMessage* msg);
 public:
-    virtual void set_recv_timeout(int64_t timeout);
+    virtual void set_recv_timeout(srs_utime_t timeout);
 };
 
 #endif

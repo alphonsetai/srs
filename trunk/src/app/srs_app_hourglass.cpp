@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -37,10 +37,10 @@ ISrsHourGlass::~ISrsHourGlass()
 {
 }
 
-SrsHourGlass::SrsHourGlass(ISrsHourGlass* h, int resolution_ms)
+SrsHourGlass::SrsHourGlass(ISrsHourGlass* h, srs_utime_t resolution)
 {
     handler = h;
-    resolution = resolution_ms;
+    _resolution = resolution;
     total_elapse = 0;
 }
 
@@ -48,39 +48,39 @@ SrsHourGlass::~SrsHourGlass()
 {
 }
 
-int SrsHourGlass::tick(int type, int interval)
+srs_error_t SrsHourGlass::tick(int type, srs_utime_t interval)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
-    if (resolution > 0 && (interval % resolution) != 0) {
-        ret = ERROR_SYSTEM_HOURGLASS_RESOLUTION;
-        srs_error("hourglass interval=%d invalid, resolution=%d. ret=%d", interval, resolution, ret);
-        return ret;
+    if (_resolution > 0 && (interval % _resolution) != 0) {
+        return srs_error_new(ERROR_SYSTEM_HOURGLASS_RESOLUTION,
+            "invalid interval=%dms, resolution=%dms", srsu2msi(interval), srsu2msi(_resolution));
     }
     
     ticks[type] = interval;
     
-    return ret;
+    return err;
 }
 
-int SrsHourGlass::cycle()
+srs_error_t SrsHourGlass::cycle()
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
-    map<int, int>::iterator it;
+    map<int, srs_utime_t>::iterator it;
     for (it = ticks.begin(); it != ticks.end(); ++it) {
         int type = it->first;
-        int interval = it->second;
+        srs_utime_t interval = it->second;
         
         if (interval == 0 || (total_elapse % interval) == 0) {
-            if ((ret = handler->notify(type, interval, total_elapse)) != ERROR_SUCCESS) {
-                return ret;
+            if ((err = handler->notify(type, interval, total_elapse)) != srs_success) {
+                return srs_error_wrap(err, "notify");
             }
         }
     }
+
+    // TODO: FIXME: Maybe we should use wallclock.
+    total_elapse += _resolution;
+    srs_usleep(_resolution);
     
-    total_elapse += resolution;
-    st_usleep(resolution * 1000);
-    
-    return ret;
+    return err;
 }

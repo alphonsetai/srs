@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,26 +28,22 @@
 
 #include <srs_app_http_conn.hpp>
 
-/**
- * the flv vod stream supports flv?start=offset-bytes.
- * for example, http://server/file.flv?start=10240
- * server will write flv header and sequence header,
- * then seek(10240) and response flv tag data.
- */
+// The flv vod stream supports flv?start=offset-bytes.
+// For example, http://server/file.flv?start=10240
+// server will write flv header and sequence header,
+// then seek(10240) and response flv tag data.
 class SrsVodStream : public SrsHttpFileServer
 {
 public:
     SrsVodStream(std::string root_dir);
     virtual ~SrsVodStream();
 protected:
-    virtual int serve_flv_stream(ISrsHttpResponseWriter* w, ISrsHttpMessage* r, std::string fullpath, int offset);
-    virtual int serve_mp4_stream(ISrsHttpResponseWriter* w, ISrsHttpMessage* r, std::string fullpath, int start, int end);
+    virtual srs_error_t serve_flv_stream(ISrsHttpResponseWriter* w, ISrsHttpMessage* r, std::string fullpath, int offset);
+    virtual srs_error_t serve_mp4_stream(ISrsHttpResponseWriter* w, ISrsHttpMessage* r, std::string fullpath, int start, int end);
 };
 
-/**
- * the http static server instance,
- * serve http static file and flv/mp4 vod stream.
- */
+// The http static server instance,
+// serve http static file and flv/mp4 vod stream.
 class SrsHttpStaticServer : virtual public ISrsReloadHandler
 {
 private:
@@ -58,13 +54,13 @@ public:
     SrsHttpStaticServer(SrsServer* svr);
     virtual ~SrsHttpStaticServer();
 public:
-    virtual int initialize();
+    virtual srs_error_t initialize();
 private:
-    virtual int mount_vhost(std::string vhost, std::string& pmount);
-// interface ISrsReloadHandler.
+    virtual srs_error_t mount_vhost(std::string vhost, std::string& pmount);
+// Interface ISrsReloadHandler.
 public:
-    virtual int on_reload_vhost_added(std::string vhost);
-    virtual int on_reload_vhost_http_updated();
+    virtual srs_error_t on_reload_vhost_added(std::string vhost);
+    virtual srs_error_t on_reload_vhost_http_updated();
 };
 
 #endif

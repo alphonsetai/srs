@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,8 @@
  */
 
 #include <srs_lib_simple_socket.hpp>
+
+#include <netinet/tcp.h>
 
 #include <srs_kernel_error.hpp>
 
@@ -64,7 +66,10 @@
 
 #include <sys/types.h>
 #include <errno.h>
+#include <stdio.h>
+#include <netdb.h>
 
+#include <srs_core_autofree.hpp>
 #include <srs_kernel_utility.hpp>
 #include <srs_kernel_consts.hpp>
 
@@ -73,6 +78,7 @@
 struct SrsBlockSyncSocket
 {
     SOCKET fd;
+    int    family;
     int64_t rbytes;
     int64_t sbytes;
     // The send/recv timeout in ms.
@@ -80,13 +86,13 @@ struct SrsBlockSyncSocket
     int64_t stm;
     
     SrsBlockSyncSocket() {
-        stm = rtm = SRS_CONSTS_NO_TMMS;
+        stm = rtm = SRS_UTIME_NO_TIMEOUT;
         rbytes = sbytes = 0;
         
         SOCKET_RESET(fd);
         SOCKET_SETUP();
     }
-    
+
     virtual ~SrsBlockSyncSocket() {
         SOCKET_CLOSE(fd);
         SOCKET_CLEANUP();
@@ -105,24 +111,42 @@ void srs_hijack_io_destroy(srs_hijack_io_t ctx)
 int srs_hijack_io_create_socket(srs_hijack_io_t ctx, srs_rtmp_t owner)
 {
     SrsBlockSyncSocket* skt = (SrsBlockSyncSocket*)ctx;
-    
-    skt->fd = ::socket(AF_INET, SOCK_STREAM, 0);
+
+    skt->family = AF_INET6;
+    skt->fd = ::socket(skt->family, SOCK_STREAM, 0);   // Try IPv6 first.
+    if (!SOCKET_VALID(skt->fd)) {
+        skt->family = AF_INET;
+        skt->fd = ::socket(skt->family, SOCK_STREAM, 0);   // Try IPv4 instead, if IPv6 fails.
+    }
     if (!SOCKET_VALID(skt->fd)) {
         return ERROR_SOCKET_CREATE;
     }
-    
+
+    // No TCP cache.
+    int v = 1;
+    setsockopt(skt->fd, IPPROTO_TCP, TCP_NODELAY, &v, sizeof(v));
+
     return ERROR_SUCCESS;
 }
 int srs_hijack_io_connect(srs_hijack_io_t ctx, const char* server_ip, int port)
 {
     SrsBlockSyncSocket* skt = (SrsBlockSyncSocket*)ctx;
+
+    char sport[8];
+    snprintf(sport, sizeof(sport), "%d", port);
     
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = inet_addr(server_ip);
+    addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family   = skt->family;
+    hints.ai_socktype = SOCK_STREAM;
     
-    if(::connect(skt->fd, (const struct sockaddr*)&addr, sizeof(sockaddr_in)) < 0){
+    addrinfo* r  = NULL;
+    SrsAutoFree(addrinfo, r);
+    if(getaddrinfo(server_ip, sport, (const addrinfo*)&hints, &r)) {
+        return ERROR_SOCKET_CONNECT;
+    }
+    
+    if(::connect(skt->fd, r->ai_addr, r->ai_addrlen) < 0){
         return ERROR_SOCKET_CONNECT;
     }
     
@@ -139,7 +163,7 @@ int srs_hijack_io_read(srs_hijack_io_t ctx, void* buf, size_t size, ssize_t* nre
     if (nread) {
         *nread = nb_read;
     }
-    
+
     // On success a non-negative integer indicating the number of bytes actually read is returned
     // (a value of 0 means the network connection is closed or end of file is reached).
     if (nb_read <= 0) {
@@ -161,13 +185,21 @@ int srs_hijack_io_read(srs_hijack_io_t ctx, void* buf, size_t size, ssize_t* nre
 int srs_hijack_io_set_recv_timeout(srs_hijack_io_t ctx, int64_t tm)
 {
     SrsBlockSyncSocket* skt = (SrsBlockSyncSocket*)ctx;
-    
+
+#ifdef _WIN32
+    DWORD tv = (DWORD)(tm);
+
+    // To convert tv to const char* to make VS2015 happy.
+    if (setsockopt(skt->fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == -1) {
+        return SOCKET_ERRNO();
+    }
+#else
     // The default for this option is zero,
     // which indicates that a receive operation shall not time out.
     int32_t sec = 0;
     int32_t usec = 0;
     
-    if (tm != SRS_CONSTS_NO_TMMS) {
+    if (tm != SRS_UTIME_NO_TIMEOUT) {
         sec = (int32_t)(tm / 1000);
         usec = (int32_t)((tm % 1000)*1000);
     }
@@ -176,9 +208,10 @@ int srs_hijack_io_set_recv_timeout(srs_hijack_io_t ctx, int64_t tm)
     if (setsockopt(skt->fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) == -1) {
         return SOCKET_ERRNO();
     }
-    
+#endif
+
     skt->rtm = tm;
-    
+
     return ERROR_SUCCESS;
 }
 int64_t srs_hijack_io_get_recv_timeout(srs_hijack_io_t ctx)
@@ -194,21 +227,30 @@ int64_t srs_hijack_io_get_recv_bytes(srs_hijack_io_t ctx)
 int srs_hijack_io_set_send_timeout(srs_hijack_io_t ctx, int64_t tm)
 {
     SrsBlockSyncSocket* skt = (SrsBlockSyncSocket*)ctx;
-    
+
+#ifdef _WIN32
+    DWORD tv = (DWORD)(tm);
+
+    // To convert tv to const char* to make VS2015 happy.
+    if (setsockopt(skt->fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1) {
+        return SOCKET_ERRNO();
+    }
+#else
     // The default for this option is zero,
     // which indicates that a receive operation shall not time out.
     int32_t sec = 0;
     int32_t usec = 0;
-    
-    if (tm != SRS_CONSTS_NO_TMMS) {
+
+    if (tm != SRS_UTIME_NO_TIMEOUT) {
         sec = (int32_t)(tm / 1000);
         usec = (int32_t)((tm % 1000)*1000);
     }
-    
+
     struct timeval tv = { sec , usec };
     if (setsockopt(skt->fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) == -1) {
         return SOCKET_ERRNO();
     }
+#endif
     
     skt->stm = tm;
     
@@ -247,14 +289,14 @@ int srs_hijack_io_writev(srs_hijack_io_t ctx, const iovec *iov, int iov_size, ss
         
         return ERROR_SOCKET_WRITE;
     }
-    
+
     skt->sbytes += nb_write;
     
     return ret;
 }
 int srs_hijack_io_is_never_timeout(srs_hijack_io_t ctx, int64_t tm)
 {
-    return tm == SRS_CONSTS_NO_TMMS;
+    return tm == SRS_UTIME_NO_TIMEOUT;
 }
 int srs_hijack_io_read_fully(srs_hijack_io_t ctx, void* buf, size_t size, ssize_t* nread)
 {
@@ -341,24 +383,28 @@ int SimpleSocketStream::connect(const char* server_ip, int port)
     return srs_hijack_io_connect(io, server_ip, port);
 }
 
-// ISrsReader
-int SimpleSocketStream::read(void* buf, size_t size, ssize_t* nread)
+// Interface ISrsReader
+srs_error_t SimpleSocketStream::read(void* buf, size_t size, ssize_t* nread)
 {
     srs_assert(io);
-    return srs_hijack_io_read(io, buf, size, nread);
+    int ret = srs_hijack_io_read(io, buf, size, nread);
+    if (ret != ERROR_SUCCESS) {
+        return srs_error_new(ret, "read");
+    }
+    return srs_success;
 }
 
-// ISrsProtocolReader
-void SimpleSocketStream::set_recv_timeout(int64_t tm)
+// Interface ISrsProtocolReader
+void SimpleSocketStream::set_recv_timeout(srs_utime_t tm)
 {
     srs_assert(io);
-    srs_hijack_io_set_recv_timeout(io, tm);
+    srs_hijack_io_set_recv_timeout(io, srsu2ms(tm));
 }
 
-int64_t SimpleSocketStream::get_recv_timeout()
+srs_utime_t SimpleSocketStream::get_recv_timeout()
 {
     srs_assert(io);
-    return srs_hijack_io_get_recv_timeout(io);
+    return srs_hijack_io_get_recv_timeout(io) * SRS_UTIME_MILLISECONDS;
 }
 
 int64_t SimpleSocketStream::get_recv_bytes()
@@ -367,17 +413,17 @@ int64_t SimpleSocketStream::get_recv_bytes()
     return srs_hijack_io_get_recv_bytes(io);
 }
 
-// ISrsProtocolWriter
-void SimpleSocketStream::set_send_timeout(int64_t tm)
+// Interface ISrsProtocolWriter
+void SimpleSocketStream::set_send_timeout(srs_utime_t tm)
 {
     srs_assert(io);
-    srs_hijack_io_set_send_timeout(io, tm);
+    srs_hijack_io_set_send_timeout(io, srsu2ms(tm));
 }
 
-int64_t SimpleSocketStream::get_send_timeout()
+srs_utime_t SimpleSocketStream::get_send_timeout()
 {
     srs_assert(io);
-    return srs_hijack_io_get_send_timeout(io);
+    return srs_hijack_io_get_send_timeout(io) * SRS_UTIME_MILLISECONDS;
 }
 
 int64_t SimpleSocketStream::get_send_bytes()
@@ -386,29 +432,34 @@ int64_t SimpleSocketStream::get_send_bytes()
     return srs_hijack_io_get_send_bytes(io);
 }
 
-int SimpleSocketStream::writev(const iovec *iov, int iov_size, ssize_t* nwrite)
+srs_error_t SimpleSocketStream::writev(const iovec *iov, int iov_size, ssize_t* nwrite)
 {
     srs_assert(io);
-    return srs_hijack_io_writev(io, iov, iov_size, nwrite);
+    int ret = srs_hijack_io_writev(io, iov, iov_size, nwrite);
+    if (ret != ERROR_SUCCESS) {
+        return srs_error_new(ret, "read");
+    }
+    return srs_success;
 }
 
-// ISrsProtocolReaderWriter
-bool SimpleSocketStream::is_never_timeout(int64_t tm)
+srs_error_t SimpleSocketStream::read_fully(void* buf, size_t size, ssize_t* nread)
 {
     srs_assert(io);
-    return srs_hijack_io_is_never_timeout(io, tm);
+    int ret = srs_hijack_io_read_fully(io, buf, size, nread);
+    if (ret != ERROR_SUCCESS) {
+        return srs_error_new(ret, "read");
+    }
+    return srs_success;
 }
 
-int SimpleSocketStream::read_fully(void* buf, size_t size, ssize_t* nread)
+srs_error_t SimpleSocketStream::write(void* buf, size_t size, ssize_t* nwrite)
 {
     srs_assert(io);
-    return srs_hijack_io_read_fully(io, buf, size, nread);
-}
-
-int SimpleSocketStream::write(void* buf, size_t size, ssize_t* nwrite)
-{
-    srs_assert(io);
-    return srs_hijack_io_write(io, buf, size, nwrite);
+    int ret = srs_hijack_io_write(io, buf, size, nwrite);
+    if (ret != ERROR_SUCCESS) {
+        return srs_error_new(ret, "read");
+    }
+    return srs_success;
 }
 
 

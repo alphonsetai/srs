@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -65,11 +65,14 @@ bool _bandwidth_is_finish(SrsBandwidthPacket* pkt)
 int _srs_expect_bandwidth_packet(SrsRtmpClient* rtmp, _CheckPacketType pfn)
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     while (true) {
         SrsCommonMessage* msg = NULL;
         SrsBandwidthPacket* pkt = NULL;
-        if ((ret = rtmp->expect_message<SrsBandwidthPacket>(&msg, &pkt)) != ERROR_SUCCESS) {
+        if ((err = rtmp->expect_message<SrsBandwidthPacket>(&msg, &pkt)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             return ret;
         }
         SrsAutoFree(SrsCommonMessage, msg);
@@ -86,11 +89,14 @@ int _srs_expect_bandwidth_packet(SrsRtmpClient* rtmp, _CheckPacketType pfn)
 int _srs_expect_bandwidth_packet2(SrsRtmpClient* rtmp, _CheckPacketType pfn, SrsBandwidthPacket** ppkt)
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     while (true) {
         SrsCommonMessage* msg = NULL;
         SrsBandwidthPacket* pkt = NULL;
-        if ((ret = rtmp->expect_message<SrsBandwidthPacket>(&msg, &pkt)) != ERROR_SUCCESS) {
+        if ((err = rtmp->expect_message<SrsBandwidthPacket>(&msg, &pkt)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             return ret;
         }
         SrsAutoFree(SrsCommonMessage, msg);
@@ -131,8 +137,7 @@ int SrsBandwidthClient::bandwidth_check(
 ) {
     int ret = ERROR_SUCCESS;
     
-    srs_update_system_time_ms();
-    *start_time = srs_get_system_time_ms();
+    *start_time = srsu2ms(srs_update_system_time());
     
     // play
     if ((ret = play_start()) != ERROR_SUCCESS) {
@@ -159,7 +164,7 @@ int SrsBandwidthClient::bandwidth_check(
     }
     
     SrsBandwidthPacket* pkt = NULL;
-    if ((ret = final(&pkt)) != ERROR_SUCCESS) {
+    if ((ret = do_final(&pkt)) != ERROR_SUCCESS) {
         return ret;
     }
     SrsAutoFree(SrsBandwidthPacket, pkt);
@@ -187,8 +192,7 @@ int SrsBandwidthClient::bandwidth_check(
         }
     }
     
-    srs_update_system_time_ms();
-    *end_time = srs_get_system_time_ms();
+    *end_time = srsu2ms(srs_update_system_time());
     
     return ret;
 }
@@ -196,6 +200,7 @@ int SrsBandwidthClient::bandwidth_check(
 int SrsBandwidthClient::play_start()
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     if ((ret = _srs_expect_bandwidth_packet(_rtmp, _bandwidth_is_start_play)) != ERROR_SUCCESS) {
         return ret;
@@ -206,7 +211,9 @@ int SrsBandwidthClient::play_start()
         // send start play response to server.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_starting_play();
         
-        if ((ret = _rtmp->send_and_free_packet(pkt, 0)) != ERROR_SUCCESS) {
+        if ((err = _rtmp->send_and_free_packet(pkt, 0)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             srs_error("send bandwidth check start play message failed. ret=%d", ret);
             return ret;
         }
@@ -225,6 +232,7 @@ int SrsBandwidthClient::play_checking()
 int SrsBandwidthClient::play_stop()
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     if ((ret = _srs_expect_bandwidth_packet(_rtmp, _bandwidth_is_stop_play)) != ERROR_SUCCESS) {
         return ret;
@@ -235,7 +243,9 @@ int SrsBandwidthClient::play_stop()
         // send stop play response to server.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_stopped_play();
         
-        if ((ret = _rtmp->send_and_free_packet(pkt, 0)) != ERROR_SUCCESS) {
+        if ((err = _rtmp->send_and_free_packet(pkt, 0)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             srs_error("send bandwidth check stop play message failed. ret=%d", ret);
             return ret;
         }
@@ -248,6 +258,7 @@ int SrsBandwidthClient::play_stop()
 int SrsBandwidthClient::publish_start(int& duration_ms, int& play_kbps)
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     if (true) {
         SrsBandwidthPacket* pkt = NULL;
@@ -270,7 +281,9 @@ int SrsBandwidthClient::publish_start(int& duration_ms, int& play_kbps)
         // send start publish response to server.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_starting_publish();
         
-        if ((ret = _rtmp->send_and_free_packet(pkt, 0)) != ERROR_SUCCESS) {
+        if ((err = _rtmp->send_and_free_packet(pkt, 0)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             srs_error("send bandwidth check start publish message failed. ret=%d", ret);
             return ret;
         }
@@ -283,6 +296,7 @@ int SrsBandwidthClient::publish_start(int& duration_ms, int& play_kbps)
 int SrsBandwidthClient::publish_checking(int duration_ms, int play_kbps)
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     if (duration_ms <= 0) {
         ret = ERROR_RTMP_BWTC_DATA;
@@ -297,9 +311,8 @@ int SrsBandwidthClient::publish_checking(int duration_ms, int play_kbps)
     }
     
     int data_count = 1;
-    srs_update_system_time_ms();
-    int64_t starttime = srs_get_system_time_ms();
-    while ((srs_get_system_time_ms() - starttime) < duration_ms) {
+    int64_t starttime = srsu2ms(srs_update_system_time());
+    while (int64_t(srsu2ms(srs_get_system_time()) - starttime) < duration_ms) {
         // TODO: FIXME: use shared ptr message.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_publishing();
         
@@ -312,19 +325,20 @@ int SrsBandwidthClient::publish_checking(int duration_ms, int play_kbps)
         }
         data_count += 2;
         
-        if ((ret = _rtmp->send_and_free_packet(pkt, 0)) != ERROR_SUCCESS) {
+        if ((err = _rtmp->send_and_free_packet(pkt, 0)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             srs_error("send bandwidth check publish messages failed. ret=%d", ret);
             return ret;
         }
         
         // use the play kbps to control the publish
-        srs_update_system_time_ms();
-        int elaps = (int)(srs_get_system_time_ms() - starttime);
+        int elaps = (int)(srsu2ms(srs_update_system_time()) - starttime);
         if (elaps > 0) {
             int current_kbps = (int)(_rtmp->get_send_bytes() * 8 / elaps);
             while (current_kbps > play_kbps) {
-                srs_update_system_time_ms();
-                elaps = (int)(srs_get_system_time_ms() - starttime);
+                srs_update_system_time();
+                elaps = (int)(srsu2ms(srs_get_system_time()) - starttime);
                 current_kbps = (int)(_rtmp->get_send_bytes() * 8 / elaps);
                 usleep(100 * 1000); // TODO: FIXME: magic number.
             }
@@ -338,12 +352,15 @@ int SrsBandwidthClient::publish_checking(int duration_ms, int play_kbps)
 int SrsBandwidthClient::publish_stop()
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     if (true) {
         // send start publish response to server.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_stop_publish();
         
-        if ((ret = _rtmp->send_and_free_packet(pkt, 0)) != ERROR_SUCCESS) {
+        if ((err = _rtmp->send_and_free_packet(pkt, 0)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             srs_error("send bandwidth check stop publish message failed. ret=%d", ret);
             return ret;
         }
@@ -359,7 +376,9 @@ int SrsBandwidthClient::publish_stop()
         // send start publish response to server.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_stopped_publish();
         
-        if ((ret = _rtmp->send_and_free_packet(pkt, 0)) != ERROR_SUCCESS) {
+        if ((err = _rtmp->send_and_free_packet(pkt, 0)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             srs_error("send bandwidth check stop publish message failed. ret=%d", ret);
             return ret;
         }
@@ -369,9 +388,10 @@ int SrsBandwidthClient::publish_stop()
     return ret;
 }
 
-int SrsBandwidthClient::final(SrsBandwidthPacket** ppkt)
+int SrsBandwidthClient::do_final(SrsBandwidthPacket** ppkt)
 {
     int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     if ((ret = _srs_expect_bandwidth_packet2(_rtmp, _bandwidth_is_finish, ppkt)) != ERROR_SUCCESS) {
         return ret;
@@ -382,7 +402,9 @@ int SrsBandwidthClient::final(SrsBandwidthPacket** ppkt)
         // send final response to server.
         SrsBandwidthPacket* pkt = SrsBandwidthPacket::create_final();
         
-        if ((ret = _rtmp->send_and_free_packet(pkt, 0)) != ERROR_SUCCESS) {
+        if ((err = _rtmp->send_and_free_packet(pkt, 0)) != srs_success) {
+            ret = srs_error_code(err);
+            srs_freep(err);
             srs_error("send bandwidth check final message failed. ret=%d", ret);
             return ret;
         }

@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -39,19 +39,14 @@ ISrsCodec::~ISrsCodec()
 
 SrsBuffer::SrsBuffer()
 {
-    set_value(NULL, 0);
+    p = bytes = NULL;
+    nb_bytes = 0;
+    
+    // TODO: support both little and big endian.
+    srs_assert(srs_is_little_endian());
 }
 
 SrsBuffer::SrsBuffer(char* b, int nb_b)
-{
-    set_value(b, nb_b);
-}
-
-SrsBuffer::~SrsBuffer()
-{
-}
-
-void SrsBuffer::set_value(char* b, int nb_b)
 {
     p = bytes = b;
     nb_bytes = nb_b;
@@ -60,27 +55,8 @@ void SrsBuffer::set_value(char* b, int nb_b)
     srs_assert(srs_is_little_endian());
 }
 
-int SrsBuffer::initialize(char* b, int nb)
+SrsBuffer::~SrsBuffer()
 {
-    int ret = ERROR_SUCCESS;
-    
-    if (!b) {
-        ret = ERROR_KERNEL_STREAM_INIT;
-        srs_error("stream param bytes must not be NULL. ret=%d", ret);
-        return ret;
-    }
-    
-    if (nb <= 0) {
-        ret = ERROR_KERNEL_STREAM_INIT;
-        srs_error("stream param size must be positive. ret=%d", ret);
-        return ret;
-    }
-    
-    nb_bytes = nb;
-    p = bytes = b;
-    srs_info("init stream ok, size=%d", size());
-    
-    return ret;
 }
 
 char* SrsBuffer::data()
@@ -98,6 +74,11 @@ int SrsBuffer::pos()
     return (int)(p - bytes);
 }
 
+int SrsBuffer::left()
+{
+    return nb_bytes - (int)(p - bytes);
+}
+
 bool SrsBuffer::empty()
 {
     return !bytes || (p >= bytes + nb_bytes);
@@ -113,6 +94,8 @@ bool SrsBuffer::require(int required_size)
 void SrsBuffer::skip(int size)
 {
     srs_assert(p);
+    srs_assert(p + size >= bytes);
+    srs_assert(p + size <= bytes + nb_bytes);
     
     p += size;
 }
@@ -270,22 +253,15 @@ void SrsBuffer::write_bytes(char* data, int size)
     p += size;
 }
 
-SrsBitBuffer::SrsBitBuffer()
+SrsBitBuffer::SrsBitBuffer(SrsBuffer* b)
 {
     cb = 0;
     cb_left = 0;
-    stream = NULL;
+    stream = b;
 }
 
 SrsBitBuffer::~SrsBitBuffer()
 {
-}
-
-int SrsBitBuffer::initialize(SrsBuffer* s) {
-    stream = s;
-    cb = 0;
-    cb_left = 0;
-    return ERROR_SUCCESS;
 }
 
 bool SrsBitBuffer::empty() {

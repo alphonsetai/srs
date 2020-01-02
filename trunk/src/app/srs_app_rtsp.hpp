@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -34,8 +34,6 @@
 #include <srs_app_thread.hpp>
 #include <srs_app_listener.hpp>
 
-#ifdef SRS_AUTO_STREAM_CASTER
-
 class SrsStSocket;
 class SrsRtspConn;
 class SrsRtspStack;
@@ -54,9 +52,7 @@ class SrsSimpleStream;
 class SrsPithyPrint;
 class SrsSimpleRtmpClient;
 
-/**
- * a rtp connection which transport a stream.
- */
+// A rtp connection which transport a stream.
 class SrsRtpConn: public ISrsUdpHandler
 {
 private:
@@ -71,15 +67,13 @@ public:
     virtual ~SrsRtpConn();
 public:
     virtual int port();
-    virtual int listen();
-// interface ISrsUdpHandler
+    virtual srs_error_t listen();
+// Interface ISrsUdpHandler
 public:
-    virtual int on_udp_packet(sockaddr_in* from, char* buf, int nb_buf);
+    virtual srs_error_t on_udp_packet(const sockaddr* from, const int fromlen, char* buf, int nb_buf);
 };
 
-/**
- * audio is group by frames.
- */
+// The audio cache, audio is grouped by frames.
 struct SrsRtspAudioCache
 {
     int64_t dts;
@@ -90,9 +84,7 @@ struct SrsRtspAudioCache
     virtual ~SrsRtspAudioCache();
 };
 
-/**
- * the time jitter correct for rtsp.
- */
+// The time jitter correct for rtsp.
 class SrsRtspJitter
 {
 private:
@@ -104,13 +96,11 @@ public:
     virtual ~SrsRtspJitter();
 public:
     virtual int64_t timestamp();
-    virtual int correct(int64_t& ts);
+    virtual srs_error_t correct(int64_t& ts);
 };
 
-/**
- * the rtsp connection serve the fd.
- */
-class SrsRtspConn : public ISrsOneCycleThreadHandler
+// The rtsp connection serve the fd.
+class SrsRtspConn : public ISrsCoroutineHandler
 {
 private:
     std::string output_template;
@@ -129,11 +119,11 @@ private:
     int audio_channel;
     SrsRtpConn* audio_rtp;
 private:
-    st_netfd_t stfd;
+    srs_netfd_t stfd;
     SrsStSocket* skt;
     SrsRtspStack* rtsp;
     SrsRtspCaster* caster;
-    SrsOneCycleThread* trd;
+    SrsCoroutine* trd;
 private:
     SrsRequest* req;
     SrsSimpleRtmpClient* sdk;
@@ -149,46 +139,43 @@ private:
     std::string aac_specific_config;
     SrsRtspAudioCache* acache;
 public:
-    SrsRtspConn(SrsRtspCaster* c, st_netfd_t fd, std::string o);
+    SrsRtspConn(SrsRtspCaster* c, srs_netfd_t fd, std::string o);
     virtual ~SrsRtspConn();
 public:
-    virtual int serve();
+    virtual srs_error_t serve();
 private:
-    virtual int do_cycle();
-    // internal methods
+    virtual srs_error_t do_cycle();
+// internal methods
 public:
-    virtual int on_rtp_packet(SrsRtpPacket* pkt, int stream_id);
-// interface ISrsOneCycleThreadHandler
+    virtual srs_error_t on_rtp_packet(SrsRtpPacket* pkt, int stream_id);
+// Interface ISrsOneCycleThreadHandler
 public:
-    virtual int cycle();
-    virtual void on_thread_stop();
+    virtual srs_error_t cycle();
 private:
-    virtual int on_rtp_video(SrsRtpPacket* pkt, int64_t dts, int64_t pts);
-    virtual int on_rtp_audio(SrsRtpPacket* pkt, int64_t dts);
-    virtual int kickoff_audio_cache(SrsRtpPacket* pkt, int64_t dts);
+    virtual srs_error_t on_rtp_video(SrsRtpPacket* pkt, int64_t dts, int64_t pts);
+    virtual srs_error_t on_rtp_audio(SrsRtpPacket* pkt, int64_t dts);
+    virtual srs_error_t kickoff_audio_cache(SrsRtpPacket* pkt, int64_t dts);
 private:
-    virtual int write_sequence_header();
-    virtual int write_h264_sps_pps(uint32_t dts, uint32_t pts);
-    virtual int write_h264_ipb_frame(char* frame, int frame_size, uint32_t dts, uint32_t pts);
-    virtual int write_audio_raw_frame(char* frame, int frame_size, SrsRawAacStreamCodec* codec, uint32_t dts);
-    virtual int rtmp_write_packet(char type, uint32_t timestamp, char* data, int size);
+    virtual srs_error_t write_sequence_header();
+    virtual srs_error_t write_h264_sps_pps(uint32_t dts, uint32_t pts);
+    virtual srs_error_t write_h264_ipb_frame(char* frame, int frame_size, uint32_t dts, uint32_t pts);
+    virtual srs_error_t write_audio_raw_frame(char* frame, int frame_size, SrsRawAacStreamCodec* codec, uint32_t dts);
+    virtual srs_error_t rtmp_write_packet(char type, uint32_t timestamp, char* data, int size);
 private:
     // Connect to RTMP server.
-    virtual int connect();
+    virtual srs_error_t connect();
     // Close the connection to RTMP server.
     virtual void close();
 };
 
-/**
- * the caster for rtsp.
- */
+// The caster for rtsp.
 class SrsRtspCaster : public ISrsTcpHandler
 {
 private:
     std::string output;
     int local_port_min;
     int local_port_max;
-    // key: port, value: whether used.
+    // The key: port, value: whether used.
     std::map<int, bool> used_ports;
 private:
     std::vector<SrsRtspConn*> clients;
@@ -196,23 +183,18 @@ public:
     SrsRtspCaster(SrsConfDirective* c);
     virtual ~SrsRtspCaster();
 public:
-    /**
-     * alloc a rtp port from local ports pool.
-     * @param pport output the rtp port.
-     */
-    virtual int alloc_port(int* pport);
-    /**
-     * free the alloced rtp port.
-     */
+    // Alloc a rtp port from local ports pool.
+    // @param pport output the rtp port.
+    virtual srs_error_t alloc_port(int* pport);
+    // Free the alloced rtp port.
     virtual void free_port(int lpmin, int lpmax);
-// interface ISrsTcpHandler
+// Interface ISrsTcpHandler
 public:
-    virtual int on_tcp_client(st_netfd_t stfd);
-    // internal methods.
+    virtual srs_error_t on_tcp_client(srs_netfd_t stfd);
+// internal methods.
 public:
     virtual void remove(SrsRtspConn* conn);
 };
 
 #endif
 
-#endif

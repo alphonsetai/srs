@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -23,6 +23,7 @@
 
 #include <srs_service_rtmp_conn.hpp>
 
+#include <unistd.h>
 using namespace std;
 
 #include <srs_protocol_kbps.hpp>
@@ -32,9 +33,10 @@ using namespace std;
 #include <srs_protocol_utility.hpp>
 #include <srs_service_utility.hpp>
 
-SrsBasicRtmpClient::SrsBasicRtmpClient(string u, int64_t ctm, int64_t stm)
+SrsBasicRtmpClient::SrsBasicRtmpClient(string u, srs_utime_t ctm, srs_utime_t stm)
 {
-    kbps = new SrsKbps();
+    clk = new SrsWallClock();
+    kbps = new SrsKbps(clk);
     
     url = u;
     connect_timeout = ctm;
@@ -42,7 +44,7 @@ SrsBasicRtmpClient::SrsBasicRtmpClient(string u, int64_t ctm, int64_t stm)
     
     req = new SrsRequest();
     srs_parse_rtmp_url(url, req->tcUrl, req->stream);
-    srs_discovery_tc_url(req->tcUrl, req->schema, req->host, req->vhost, req->app, req->port, req->param);
+    srs_discovery_tc_url(req->tcUrl, req->schema, req->host, req->vhost, req->app, req->stream, req->port, req->param);
     
     transport = NULL;
     client = NULL;
@@ -54,41 +56,39 @@ SrsBasicRtmpClient::~SrsBasicRtmpClient()
 {
     close();
     srs_freep(kbps);
+    srs_freep(clk);
 }
 
-int SrsBasicRtmpClient::connect()
+srs_error_t SrsBasicRtmpClient::connect()
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     close();
     
-    transport = new SrsTcpClient(req->host, req->port, connect_timeout);
+    transport = new SrsTcpClient(req->host, req->port, srs_utime_t(connect_timeout));
     client = new SrsRtmpClient(transport);
     kbps->set_io(transport, transport);
     
-    if ((ret = transport->connect()) != ERROR_SUCCESS) {
+    if ((err = transport->connect()) != srs_success) {
         close();
-        return ret;
+        return srs_error_wrap(err, "connect");
     }
     
     client->set_recv_timeout(stream_timeout);
     client->set_send_timeout(stream_timeout);
     
     // connect to vhost/app
-    if ((ret = client->handshake()) != ERROR_SUCCESS) {
-        srs_error("sdk: handshake with server failed. ret=%d", ret);
-        return ret;
+    if ((err = client->handshake()) != srs_success) {
+        return srs_error_wrap(err, "handshake");
     }
-    if ((ret = connect_app()) != ERROR_SUCCESS) {
-        srs_error("sdk: connect with server failed. ret=%d", ret);
-        return ret;
+    if ((err = connect_app()) != srs_success) {
+        return srs_error_wrap(err, "connect app");
     }
-    if ((ret = client->create_stream(stream_id)) != ERROR_SUCCESS) {
-        srs_error("sdk: connect with server failed, stream_id=%d. ret=%d", stream_id, ret);
-        return ret;
+    if ((err = client->create_stream(stream_id)) != srs_success) {
+        return srs_error_wrap(err, "create stream_id=%d", stream_id);
     }
     
-    return ret;
+    return err;
 }
 
 void SrsBasicRtmpClient::close()
@@ -98,14 +98,14 @@ void SrsBasicRtmpClient::close()
     srs_freep(transport);
 }
 
-int SrsBasicRtmpClient::connect_app()
+srs_error_t SrsBasicRtmpClient::connect_app()
 {
     return do_connect_app(srs_get_public_internet_address(), false);
 }
 
-int SrsBasicRtmpClient::do_connect_app(string local_ip, bool debug)
+srs_error_t SrsBasicRtmpClient::do_connect_app(string local_ip, bool debug)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
     // args of request takes the srs info.
     if (req->args == NULL) {
@@ -118,14 +118,8 @@ int SrsBasicRtmpClient::do_connect_app(string local_ip, bool debug)
     data->set("srs_sig", SrsAmf0Any::str(RTMP_SIG_SRS_KEY));
     data->set("srs_server", SrsAmf0Any::str(RTMP_SIG_SRS_SERVER));
     data->set("srs_license", SrsAmf0Any::str(RTMP_SIG_SRS_LICENSE));
-    data->set("srs_role", SrsAmf0Any::str(RTMP_SIG_SRS_ROLE));
     data->set("srs_url", SrsAmf0Any::str(RTMP_SIG_SRS_URL));
     data->set("srs_version", SrsAmf0Any::str(RTMP_SIG_SRS_VERSION));
-    data->set("srs_site", SrsAmf0Any::str(RTMP_SIG_SRS_WEB));
-    data->set("srs_email", SrsAmf0Any::str(RTMP_SIG_SRS_EMAIL));
-    data->set("srs_copyright", SrsAmf0Any::str(RTMP_SIG_SRS_COPYRIGHT));
-    data->set("srs_primary", SrsAmf0Any::str(RTMP_SIG_SRS_PRIMARY));
-    data->set("srs_authors", SrsAmf0Any::str(RTMP_SIG_SRS_AUTHROS));
     // for edge to directly get the id of client.
     data->set("srs_pid", SrsAmf0Any::number(getpid()));
     data->set("srs_id", SrsAmf0Any::number(_srs_context->get_id()));
@@ -136,7 +130,7 @@ int SrsBasicRtmpClient::do_connect_app(string local_ip, bool debug)
     // generate the tcUrl
     std::string param = "";
     std::string target_vhost = req->vhost;
-    std::string tc_url = srs_generate_tc_url(req->host, req->vhost, req->app, req->port, param);
+    std::string tc_url = srs_generate_tc_url(req->host, req->vhost, req->app, req->port);
     
     // replace the tcUrl in request,
     // which will replace the tc_url in client.connect_app().
@@ -145,40 +139,41 @@ int SrsBasicRtmpClient::do_connect_app(string local_ip, bool debug)
     // upnode server identity will show in the connect_app of client.
     // @see https://github.com/ossrs/srs/issues/160
     // the debug_srs_upnode is config in vhost and default to true.
-    if ((ret = client->connect_app(req->app, tc_url, req, debug, NULL)) != ERROR_SUCCESS) {
-        srs_error("sdk: connect with server failed, tcUrl=%s, dsu=%d. ret=%d",
-                  tc_url.c_str(), debug, ret);
-        return ret;
+    SrsServerInfo si;
+    if ((err = client->connect_app(req->app, tc_url, req, debug, &si)) != srs_success) {
+        return srs_error_wrap(err, "connect app tcUrl=%s, debug=%d", tc_url.c_str(), debug);
     }
     
-    return ret;
+    return err;
 }
 
-int SrsBasicRtmpClient::publish()
+srs_error_t SrsBasicRtmpClient::publish(int chunk_size)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
+    
+    // Pass params in stream, @see https://github.com/ossrs/srs/issues/1031#issuecomment-409745733
+    string stream = srs_generate_stream_with_query(req->host, req->vhost, req->stream, req->param);
     
     // publish.
-    if ((ret = client->publish(req->stream, stream_id)) != ERROR_SUCCESS) {
-        srs_error("sdk: publish failed, stream=%s, stream_id=%d. ret=%d",
-                  req->stream.c_str(), stream_id, ret);
-        return ret;
+    if ((err = client->publish(stream, stream_id, chunk_size)) != srs_success) {
+        return srs_error_wrap(err, "publish failed, stream=%s, stream_id=%d", stream.c_str(), stream_id);
     }
     
-    return ret;
+    return err;
 }
 
-int SrsBasicRtmpClient::play()
+srs_error_t SrsBasicRtmpClient::play(int chunk_size)
 {
-    int ret = ERROR_SUCCESS;
+    srs_error_t err = srs_success;
     
-    if ((ret = client->play(req->stream, stream_id)) != ERROR_SUCCESS) {
-        srs_error("connect with server failed, stream=%s, stream_id=%d. ret=%d",
-                  req->stream.c_str(), stream_id, ret);
-        return ret;
+    // Pass params in stream, @see https://github.com/ossrs/srs/issues/1031#issuecomment-409745733
+    string stream = srs_generate_stream_with_query(req->host, req->vhost, req->stream, req->param);
+    
+    if ((err = client->play(stream, stream_id, chunk_size)) != srs_success) {
+        return srs_error_wrap(err, "connect with server failed, stream=%s, stream_id=%d", stream.c_str(), stream_id);
     }
     
-    return ret;
+    return err;
 }
 
 void SrsBasicRtmpClient::kbps_sample(const char* label, int64_t age)
@@ -214,27 +209,27 @@ int SrsBasicRtmpClient::sid()
     return stream_id;
 }
 
-int SrsBasicRtmpClient::recv_message(SrsCommonMessage** pmsg)
+srs_error_t SrsBasicRtmpClient::recv_message(SrsCommonMessage** pmsg)
 {
     return client->recv_message(pmsg);
 }
 
-int SrsBasicRtmpClient::decode_message(SrsCommonMessage* msg, SrsPacket** ppacket)
+srs_error_t SrsBasicRtmpClient::decode_message(SrsCommonMessage* msg, SrsPacket** ppacket)
 {
     return client->decode_message(msg, ppacket);
 }
 
-int SrsBasicRtmpClient::send_and_free_messages(SrsSharedPtrMessage** msgs, int nb_msgs)
+srs_error_t SrsBasicRtmpClient::send_and_free_messages(SrsSharedPtrMessage** msgs, int nb_msgs)
 {
     return client->send_and_free_messages(msgs, nb_msgs, stream_id);
 }
 
-int SrsBasicRtmpClient::send_and_free_message(SrsSharedPtrMessage* msg)
+srs_error_t SrsBasicRtmpClient::send_and_free_message(SrsSharedPtrMessage* msg)
 {
     return client->send_and_free_message(msg, stream_id);
 }
 
-void SrsBasicRtmpClient::set_recv_timeout(int64_t timeout)
+void SrsBasicRtmpClient::set_recv_timeout(srs_utime_t timeout)
 {
     transport->set_recv_timeout(timeout);
 }

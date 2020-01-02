@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -31,14 +31,12 @@
 #include <srs_service_st.hpp>
 #include <srs_kernel_log.hpp>
 
-/**
- * st thread context, get_id will get the st-thread id,
- * which identify the client.
- */
+// The st thread context, get_id will get the st-thread id,
+// which identify the client.
 class SrsThreadContext : public ISrsThreadContext
 {
 private:
-    std::map<st_thread_t, int> cache;
+    std::map<srs_thread_t, int> cache;
 public:
     SrsThreadContext();
     virtual ~SrsThreadContext();
@@ -50,9 +48,7 @@ public:
     virtual void clear_cid();
 };
 
-/**
- * The basic console log, which write log to console.
- */
+// The basic console log, which write log to console.
 class SrsConsoleLog : public ISrsLog
 {
 private:
@@ -63,9 +59,9 @@ private:
 public:
     SrsConsoleLog(SrsLogLevel l, bool u);
     virtual ~SrsConsoleLog();
-// interface ISrsLog
+// Interface ISrsLog
 public:
-    virtual int initialize();
+    virtual srs_error_t initialize();
     virtual void reopen();
     virtual void verbose(const char* tag, int context_id, const char* fmt, ...);
     virtual void info(const char* tag, int context_id, const char* fmt, ...);
@@ -74,13 +70,11 @@ public:
     virtual void error(const char* tag, int context_id, const char* fmt, ...);
 };
 
-/**
- * Generate the log header.
- * @param dangerous Whether log is warning or error, log the errno if true.
- * @param utc Whether use UTC time format in the log header.
- * @param psize Output the actual header size.
- * @remark It's a internal API.
- */
+// Generate the log header.
+// @param dangerous Whether log is warning or error, log the errno if true.
+// @param utc Whether use UTC time format in the log header.
+// @param psize Output the actual header size.
+// @remark It's a internal API.
 bool srs_log_header(char* buffer, int size, bool utc, bool dangerous, const char* tag, int cid, const char* level, int* psize);
 
 #endif

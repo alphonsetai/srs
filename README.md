@@ -1,206 +1,260 @@
-# Simple-RTMP-Server
+# SRS
 
-[![CircleCI](https://circleci.com/gh/ossrs/srs/tree/develop.svg?style=svg)](https://circleci.com/gh/ossrs/srs/tree/develop)
-[![Wechat](https://cloud.githubusercontent.com/assets/2777660/22814959/c51cbe72-ef92-11e6-81cc-32b657b285d5.png)](https://github.com/ossrs/srs/wiki/v1_CN_Contact#wechat)
-[<img width="52" alt="Skype" src="https://cloud.githubusercontent.com/assets/2777660/24329166/3821a328-1230-11e7-844a-506a5d17dd3d.png">](https://github.com/ossrs/srs/wiki/v1_EN_Contact#skype-or-gitter)
+![](http://ossrs.net/gif/v1/sls.gif?site=github.com&path=/srs/develop)
+[![](https://circleci.com/gh/ossrs/srs/tree/develop.svg?style=svg&circle-token=1ef1d5b5b0cde6c8c282ed856a18199f9e8f85a9)](https://circleci.com/gh/ossrs/srs/tree/develop)
+[![](https://codecov.io/gh/ossrs/srs/branch/develop/graph/badge.svg)](https://codecov.io/gh/ossrs/srs/branch/develop)
+[![](https://cloud.githubusercontent.com/assets/2777660/22814959/c51cbe72-ef92-11e6-81cc-32b657b285d5.png)](https://github.com/ossrs/srs/wiki/v1_CN_Contact#wechat)
 
-SRS/3.0, [OuXuli][release3]<br/>
-SRS是大娱乐直播领域广泛应用的野鸡服务器，志存高远不限于色情行业。<br/>
-SRS is an industrial-strength live cluster, with simple code and best conceptual integrity.
+SRS/3.0，[OuXuli][release3]，是一个简单的流媒体直播集群，简单的快乐。<br/>
+SRS(Simple RTMP Server) is a simple live streaming cluster, a simple joy.
 
-Download from github.io: [Centos6-x86_64][centos0], [more...][more0]<br/>
-Download from ossrs.net: [Centos6-x86_64][centos1], [more...][more1]<br/>
-For the wiki for SRS/3.0, please read [Chinese][srs_CN] or [English][srs_EN].
+> Remark: Although SRS is licenced under [MIT][LICENSE], but there are some depended libraries which are distributed using their own licenses, please read [License Mixing][LicenseMixing].
 
-## Content
+<a name="product"></a>
+## Usage
 
-* [About](#about)
-* [Product](#product)
-* [Usage](#usage)
-* [Wiki for v3.0](#srs-30-wiki)
-* [Wiki for v2.0](#srs-20-wiki)
-* [Wiki for v1.0](#srs-10-wiki)
-* [Features](#features)
-* [v3.0 changes](#v3-changes)
-* [v2.0 changes](#v2-changes)
-* [v1.0 changes](#v1-changes)
-* [Releases](#releases)
-* [Compare](#compare)
-* [Performance](#performance)
-* [Architecture](#architecture)
-* [System Architecture](#system-architecture)
-* [Modularity Architecture](#modularity-architecture)
-* [Stream Architecture](#stream-architecture)
-* [Tips](#tips)
-* [Authors](#authors)
-* [Mirrors](#mirrors)
-* [System Requirements](#system-requirements)
-
-## About
-
-SRS(Simple RTMP Server) is created in 2013.10.
-SRS supports many protocols includes RTMP, HLS, HTTP-FLV and HDS.
-SRS can run on both LINUX and OSX, and X86, X64, ARM and MIPS cpu.
-Vhost is used as service unit for live cluster, which delivery stream by origin and edge.
-The stream on origin can be transcoded, DVR to VOD file, ingest from external sources, or forwarded to other servers.
-HTTP API and callback is powerful mechenism for integraty.
-The wikis are writen by both English and Chinese.
-
-Why SRS?
-
-1. <strong>Completely rewriten HLS:</strong> Following m3u8/ts spec, and HLS support h.264+aac/mp3.
-1. <strong>High efficient RTMP:</strong> Deliverying support 7k+ concurrency, vhost based, both origin and edge.
-1. <strong>Embeded HTTP server:</strong> For HLS, api and HTTP flv/ts/mp3/aac streaming.
-1. <strong>Variety inputs:</strong> RTMP, pull by ingest file or stream(HTTP/RTMP/RTSP), push by stream caster 
-RTSP/MPEGTS-over-UDP.
-1. <strong>Popular internet delivery:</strong> RTMP/HDS for flash, HLS for mobile(IOS/IPad/MAC/Android), HTTP 
-flv/ts/mp3/aac streaming for user prefered.
-1. <strong>Enhanced DVR:</strong> Segment/session/append plan, customer path and HTTP callback, to FLV/MP4 file.
-1. <strong>Multiple features:</strong> Transcode, forward, ingest, http hooks, dvr, hls, rtsp, http streaming, 
-http raw api, refer, log, bandwith test and srs-librtmp.
-1. <strong>Best maintainess:</strong> Simple arch over state-threads(coroutine), single thread, single process 
-and for linux/osx platform, common server x86-64/i386/arm/mips cpus, rich comments, strictly 
-follows RTMP/HLS/RTSP spec.
-1. <strong>Easy to use:</strong> Both English and Chinese wiki, typically config files in trunk/conf, traceable 
-and session based log, linux service script and install script.
-1. <strong>MIT license:</strong> Open source with product management and evolution.
-
-Enjoy it!
-
-## Product
-
-The `usage`, `wiki`, `changes`, `features`, `compare`, `release` and `performance` of SRS.
-
-### Usage
-
-<strong>Step 1:</strong> Get SRS.
-<strong>Download slow? Please use [mirrors](#mirrors) for SRS.</strong>
+**Step 1:** Get SRS.
 
 ```
 git clone https://github.com/ossrs/srs &&
 cd srs/trunk
 ```
 
-<strong>Step 2:</strong> Build SRS.
-<strong>Requires Centos6 32/64bits, others see Build([CN][v3_CN_Build],[EN][v3_EN_Build]).</strong>
+> Note: Repository too large? Please clone from these [mirrors](#mirrors) instead.
+
+**Step 2:** Build SRS.
 
 ```
 ./configure && make
 ```
 
-<strong>Step 3:</strong> Start SRS 
+> Remark: Recommend Centos6 64bits, please read wiki([CN][v3_CN_Build],[EN][v3_EN_Build]).
+
+> Note: You can also build SRS in docker, please read [docker][docker-dev].
+
+**Step 3:** Run SRS 
 
 ```
 ./objs/srs -c conf/srs.conf
 ```
 
-<strong>See also:</strong>
+**Whatever**, you can also directly run SRS in [docker][docker-srs3]:
+
+```
+docker run -p 1935:1935 -p 1985:1985 -p 8080:8080 ossrs/srs:3
+```
+
+**From here,** strongly recommend to read bellow wikis:
+
 * Usage: How to delivery RTMP?([CN][v1_CN_SampleRTMP], [EN][v1_EN_SampleRTMP])
-* Usage: How to delivery RTMP Cluster?([CN][v3_CN_SampleRTMPCluster], [EN][v3_EN_SampleRTMPCluster])
+* Usage: How to delivery RTMP Edge Cluster?([CN][v3_CN_SampleRTMPCluster], [EN][v3_EN_SampleRTMPCluster])
+* Usage: How to create a RTMP Origin Cluster?([CN][v3_CN_SampleOriginCluster], [EN][v3_EN_SampleOriginCluster])
 * Usage: How to delivery HTTP FLV Live Streaming?([CN][v3_CN_SampleHttpFlv], [EN][v3_EN_SampleHttpFlv])
 * Usage: How to delivery HTTP FLV Live Streaming Cluster?([CN][v3_CN_SampleHttpFlvCluster], [EN][v3_EN_SampleHttpFlvCluster])
 * Usage: How to delivery HLS?([CN][v3_CN_SampleHLS], [EN][v3_EN_SampleHLS])
 * Usage: How to delivery HLS for other codec?([CN][v3_CN_SampleTranscode2HLS], [EN][v3_EN_SampleTranscode2HLS])
-* Usage: How to transode RTMP stream by SRS?([CN][v2_CN_SampleFFMPEG], [EN][v2_EN_SampleFFMPEG])
-* Usage: How to forward stream to other server?([CN][v3_CN_SampleForward], [EN][v3_EN_SampleForward])
-* Usage: How to deploy low lantency application?([CN][v3_CN_SampleRealtime], [EN][v3_EN_SampleRealtime])
-* Usage: How to deploy SRS on ARM?([CN][v1_CN_SampleARM], [EN][v1_EN_SampleARM])
-* Usage: How to ingest file/stream/device to SRS?([CN][v1_CN_SampleIngest], [EN][v1_EN_SampleIngest])
-* Usage: How to use SRS-HTTP-server to delivery HTTP/HLS stream?([CN][v3_CN_SampleHTTP], [EN][v3_EN_SampleHTTP])
-* Usage: How to show the demo of SRS? ([CN][v1_CN_SampleDemo], [EN][v1_EN_SampleDemo])
-* Usage: How to publish h.264 raw stream to SRS? ([CN][v3_CN_SrsLibrtmp2], [EN][v3_EN_SrsLibrtmp2])
-* Usage: Solution using SRS?([CN][v1_CN_Sample], [EN][v1_EN_Sample])
-* Usage: Why SRS?([CN][v1_CN_Product], [EN][v1_EN_Product])
+* Usage: How to transode RTMP stream by FFMPEG?([CN][v2_CN_SampleFFMPEG], [EN][v2_EN_SampleFFMPEG])
+* Usage: How to forward stream to other servers?([CN][v3_CN_SampleForward], [EN][v3_EN_SampleForward])
+* Usage: How to deploy in low lantency mode?([CN][v3_CN_SampleRealtime], [EN][v3_EN_SampleRealtime])
+* Usage: How to ingest file/stream/device to RTMP?([CN][v1_CN_SampleIngest], [EN][v1_EN_SampleIngest])
+* Usage: How to delivery HLS by SRS HTTP server?([CN][v3_CN_SampleHTTP], [EN][v3_EN_SampleHTTP])
+* Usage: How to publish h.264 raw stream as RTMP? ([CN][v3_CN_SrsLibrtmp2], [EN][v3_EN_SrsLibrtmp2])
+* Usage: How to improve edge performance by multiple CPUs? ([CN][v3_CN_REUSEPORT], [EN][v3_EN_REUSEPORT])
+* Usage: Why choose SRS? About the milestone and product plan? ([CN][v1_CN_Product], [EN][v1_EN_Product])
+* Usage: How to file bug or chat with us? ([CN][v1_CN_Contact], [EN][v1_EN_Contact])
 
-### SRS 1.0 wiki
+<a name="srs-30-wiki"></a>
+## Wiki
 
-Please select your language:
-* [SRS 1.0 English][v1-wiki-en]
-* [SRS 1.0 Chinese][v1-wiki-cn]
+Please select according to languages:
 
-### SRS 2.0 wiki
+* [SRS 3.0 English Wiki][v3_EN_Home]
+* [SRS 3.0 Chinese Wiki][v3_CN_Home]
 
-Please select your language:
-* [SRS 2.0 English][v2-wiki-en]
-* [SRS 2.0 Chinese][v2-wiki-cn]
+For previous versions, please read:
 
-### SRS 3.0 wiki
+* [SRS 2.0 English Wiki][v2_EN_Home]
+* [SRS 2.0 Chinese Wiki][v2_CN_Home]
+* [SRS 1.0 English Wiki][v1_EN_Home]
+* [SRS 1.0 Chinese Wiki][v1_CN_Home]
 
-Please select your language:
-* [SRS 3.0 English][v3_EN_Home]
-* [SRS 3.0 Chinese][v3_CN_Home]
+## Features
 
-### Features
-
-- [x] Simple and stable enough.
-- [x] Support RTMP origin-edge cluster, for origin ([CN][v1_CN_DeliveryRTMP],[EN][v1_EN_DeliveryRTMP]), for edge([CN][v3_CN_Edge], [EN][v3_EN_Edge]).
-- [x] Support remux RTMP to HTTP-FLV([CN][v3_CN_SampleHttpFlv], [EN][v3_EN_SampleHttpFlv]) or HLS([CN][v3_CN_DeliveryHLS], [EN][v3_EN_DeliveryHLS]).
-- [x] High-performance([CN][v1_CN_Performance], [EN][v1_EN_Performance]): single-thread, async socket, event(st) driven.
-- [x] High-concurrency([CN][v1_CN_Performance], [EN][v1_EN_Performance]), 6000+ connections(500kbps), 900Mbps, CPU 90.2%, 41MB.
+- [x] Using coroutine by ST, it's really simple and stupid enough.
+- [x] Support cluster which consists of origin ([CN][v1_CN_DeliveryRTMP],[EN][v1_EN_DeliveryRTMP]) and edge([CN][v3_CN_Edge], [EN][v3_EN_Edge]) server and uses RTMP as default transport protocol.
+- [x] Origin server supports remuxing RTMP to HTTP-FLV([CN][v3_CN_SampleHttpFlv], [EN][v3_EN_SampleHttpFlv]) and HLS([CN][v3_CN_DeliveryHLS], [EN][v3_EN_DeliveryHLS]).
+- [x] Edge server supports remuxing RTMP to HTTP-FLV([CN][v3_CN_SampleHttpFlv], [EN][v3_EN_SampleHttpFlv]). As for HLS([CN][v3_CN_DeliveryHLS], [EN][v3_EN_DeliveryHLS]) edge server, recomment to use HTTP edge server, such as [NGINX](http://nginx.org/).
+- [x] Support HLS with audio-only([CN][v3_CN_DeliveryHLS2], [EN][v3_EN_DeliveryHLS2]), which need to build the timestamp from AAC samples, so we enhanced it please read [#547][bug #547].
+- [x] Support HLS with mp3(h.264+mp3) audio codec, please read [bug #301][bug #301].
+- [x] Support remuxing RTMP to http FLV/MP3/AAC/TS live streaming, please read wiki([CN][v2_CN_DeliveryHttpStream], [EN][v2_CN_DeliveryHttpStream]).
+- [x] Support ingesting([CN][v1_CN_Ingest], [EN][v1_EN_Ingest]) other protocols to SRS by FFMPEG.
+- [x] Support RTMP long time(>4.6hours) publishing/playing, with the timestamp corrected.
+- [x] Support publishing h264 raw stream([CN][v3_CN_SrsLibrtmp2], [EN][v3_EN_SrsLibrtmp2]) by srs-librtmp([CN][v3_CN_SrsLibrtmp], [EN][v3_EN_SrsLibrtmp]).
+- [x] Support publishing aac adts raw stream([CN][v3_CN_SrsLibrtmp3], [EN][v3_EN_SrsLibrtmp3]) by srs-librtmp([CN][v3_CN_SrsLibrtmp], [EN][v3_EN_SrsLibrtmp]).
+- [x] Support native HTTP server([CN][v3_CN_SampleHTTP], [EN][v3_EN_SampleHTTP]) for http api and http live streaming.
+- [x] Support HTTP CORS for js in http api and http live streaming.
+- [x] Support HTTP API([CN][v3_CN_HTTPApi], [EN][v3_EN_HTTPApi]) for system management.
+- [x] Support HTTP callback([CN][v3_CN_HTTPCallback], [EN][v3_EN_HTTPCallback]) for authentication and integration.
+- [x] Support DVR([CN][v3_CN_DVR], [EN][v3_EN_DVR]) to record live streaming to FLV file.
+- [x] Support DVR control module like NGINX-RTMP, please read [#459][bug #459].
+- [x] Support EXEC like NGINX-RTMP, please read [bug #367][bug #367].
+- [x] Support security strategy including allow/deny publish/play IP([CN][v2_CN_Security], [EN][v2_EN_Security]).
+- [x] Support low latency(0.1s+) transport model, please read [bug #257][bug #257].
+- [x] Support gop-cache([CN][v3_CN_LowLatency2], [EN][v3_EN_LowLatency2]) for player fast startup.
 - [x] Support Vhost([CN][v1_CN_RtmpUrlVhost], [EN][v1_EN_RtmpUrlVhost]) and \_\_defaultVhost\_\_.
-- [x] Support HLS audio-only([CN][v3_CN_DeliveryHLS2], [EN][v3_EN_DeliveryHLS2]) live streaming.
-- [x] Support reload([CN][v1_CN_Reload], [EN][v1_EN_Reload]) config to hot apply config.
-- [x] Support gop-cache to cache last gop([CN][v3_CN_LowLatency2], [EN][v3_EN_LowLatency2]) for fast startup.
-- [x] Support listen at multiple ports.
-- [x] Support RTMP long time(>4.6hours) publish/play.
-- [x] Support forward([CN][v3_CN_Forward], [EN][v3_EN_Forward]) in master-slave mode.
-- [x] Support transcoding([CN][v3_CN_FFMPEG], [EN][v3_EN_FFMPEG]) by fork ffmpeg.
-- [x] Support HTTP-callback([CN][v3_CN_HTTPCallback], [EN][v3_EN_HTTPCallback]) for authentication and injection.
-- [x] Support bandwidth test([CN][v1_CN_BandwidthTestTool], [EN][v1_EN_BandwidthTestTool]) api and flash client.
-- [x] Support wiki in both [Chinese][v3_CN_Home] and [English][v3_EN_Home]. 
-- [x] Support RTMP client library: srs-librtmp([CN][v3_CN_SrsLibrtmp], [EN][v3_EN_SrsLibrtmp])
-- [x] Support ARM([CN][v1_CN_SrsLinuxArm], [EN][v1_EN_SrsLinuxArm]) with rtmp/ssl/hls/librtmp.
-- [x] Support HTTP-API([CN][v3_CN_HTTPApi], [EN][v3_EN_HTTPApi]) for management.
-- [x] Support ingest([CN][v1_CN_Ingest], [EN][v1_EN_Ingest]) other protocol to RTMP by ffmpeg.
-- [x] Support DVR([CN][v3_CN_DVR], [EN][v3_EN_DVR]) to record live to flv file.
-- [x] Support tracable log, session based log([CN][v1_CN_SrsLog], [EN][v1_EN_SrsLog]).
-- [x] Support Adobe FMS/AMS token traverse([CN][v3_CN_DRM2], [EN][v3_EN_DRM2]).
-- [x] Support embeded HTTP server([CN][v3_CN_SampleHTTP], [EN][v3_EN_SampleHTTP]) for http streaming.
-- [x] Support publish h264 raw stream([CN][v3_CN_SrsLibrtmp2], [EN][v3_EN_SrsLibrtmp2]) by srs-librtmp.
-- [x] Support publish aac adts raw stream([CN][v3_CN_SrsLibrtmp3], [EN][v3_EN_SrsLibrtmp3]) by srs-librtmp.
-- [x] Support low latency(0.1s+), please read [bug #257][bug #257].
-- [x] Support security to allow/deny publish/play ip([CN][v2_CN_Security], [EN][v2_EN_Security]).
-- [x] Support remux RTMP to http flv/mp3/aac/ts live stream, please read wiki([CN][v2_CN_DeliveryHttpStream], [EN][v2_CN_DeliveryHttpStream]).
-- [x] Support HLS with mp3(h.264+mp3), please read [bug #301][bug #301].
-- [x] Support EXEC introduced by nginx-rtmp, please read [bug #367][bug #367].
-- [x] Support DVR control module introduced by nginx-rtmp, please read [#459][bug #459].
-- [x] Support HTTP RAW API, please read [#459][bug #459], [#470][bug #470], [#319][bug #319].
-- [x] Support http api/stream CORS for js.
-- [x] Support valgrind and latest ARM by patch ST.
-- [x] [experiment] Support big-data with Kafka, please read [#467][bug #467].
-- [x] [experiment] Support Adobe HDS(f4m), please read wiki([CN][v2_CN_DeliveryHDS], [EN][v2_EN_DeliveryHDS]).
-- [x] [experiment] Support push MPEG-TS over UDP to SRS, please read [bug #250][bug #250].
-- [x] [experiment] Support push RTSP to SRS, please read [bug #133][bug #133].
-- [x] [experiment] Support push POST FLV over HTTP, please read [wiki]([CN][v2_CN_Streamer2], [EN][v2_EN_Streamer2]).
-- [x] [experiment] Support multiple processes by [dolphin][srs-dolphin] or [oryx][oryx].
-- [x] [experiment] Support [mgmt console][console], please read [srs-ngb][srs-ngb].
-- [x] Enhanced HLS audio-only use ts, see [#547][bug #547].
-- [ ] Enhanced forward with vhost and url variables.
-- [ ] Support source or idle stream cleanup.
-- [ ] Support origin cluster, please read [#464][bug #464], [RTMP 302][bug #92].
-- [ ] Support H.265, push RTMP with H.265, delivery in HLS, read [#465][bug #465].
-- [ ] Support MPEG-DASH, the future streaming protocol, read [#299][bug #299].
-- [ ] Support HLS+, please read [#466][bug #466] and [#468][bug #468].
+- [x] Support reloading([CN][v1_CN_Reload], [EN][v1_EN_Reload]) to apply changes of config.
+- [x] Support listening at multiple ports.
+- [x] Support forwarding([CN][v3_CN_Forward], [EN][v3_EN_Forward]) from master to slave server.
+- [x] Support transcoding([CN][v3_CN_FFMPEG], [EN][v3_EN_FFMPEG]) live streaming by FFMPEG.
+- [x] All wikis are writen in [Chinese][v3_CN_Home] and [English][v3_EN_Home]. 
+- [x] Enhanced json, replace NXJSON(LGPL) with json-parser(BSD), read [#904][bug #904].
+- [x] Support valgrind and latest ARM by patching ST, read [ST#1](https://github.com/ossrs/state-threads/issues/1) and [ST#2](https://github.com/ossrs/state-threads/issues/2).
+- [x] Support tracable and session-based log([CN][v1_CN_SrsLog], [EN][v1_EN_SrsLog]).
+- [x] High concurrency and performance([CN][v1_CN_Performance], [EN][v1_EN_Performance]), 6000+ connections(200kbps), CPU 82%, 203MB.
+- [x] Enhanced complex error code with description and stack, read [#913][bug #913].
+- [x] Enhanced RTMP url  which supports vhost in stream, read [#1059][bug #1059].
+- [x] Support origin cluster, please read [#464][bug #464], [RTMP 302][bug #92].
+- [x] Support listen at IPv4 and IPv6, read [#460][bug #460].
+- [x] Support SO_REUSEPORT, to improve edge server performance, read [#775][bug #775].
+- [x] [Experimental] Support docker by [srs-docker](https://github.com/ossrs/srs-docker).
+- [x] [Experimental] Support DVR in MP4 format, read [#738][bug #738].
+- [x] [Experimental] Support MPEG-DASH, the future live streaming protocol, read [#299][bug #299].
+- [x] [Experimental] Support pushing MPEG-TS over UDP, please read [bug #250][bug #250].
+- [x] [Experimental] Support pushing RTSP, please read [bug #133][bug #133].
+- [x] [Experimental] Support pushing FLV over HTTP POST, please read [wiki]([CN][v2_CN_Streamer2], [EN][v2_EN_Streamer2]).
+- [x] [Experimental] Support multiple processes by [dolphin][srs-dolphin] or [oryx][oryx].
+- [x] [Experimental] Support a simple [mgmt console][console], please read [srs-ngb][srs-ngb].
+- [x] [Experimental] Support RTMP client library: srs-librtmp([CN][v3_CN_SrsLibrtmp], [EN][v3_EN_SrsLibrtmp])
+- [x] [Experimental] Support HTTP RAW API, please read [#459][bug #459], [#470][bug #470], [#319][bug #319].
+- [x] [Deprecated] Support Adobe HDS(f4m), please read wiki([CN][v2_CN_DeliveryHDS], [EN][v2_EN_DeliveryHDS]) and [#1535][bug #1535].
+- [x] [Deprecated] Support bandwidth testing([CN][v1_CN_BandwidthTestTool], [EN][v1_EN_BandwidthTestTool]), please read [#1535][bug #1535].
+- [x] [Deprecated] Support Adobe FMS/AMS token traverse([CN][v3_CN_DRM2], [EN][v3_EN_DRM2]) authentication, please read [#1535][bug #1535].
+- [ ] Utest cover almost all kernel code.
+- [ ] Enhanced forwarding with vhost and variables.
+- [ ] Support source cleanup for idle streams.
+- [ ] Support H.265 by pushing H.265 over RTMP, deliverying in HLS, read [#465][bug #465].
+- [ ] Support HLS+, the HLS edge server, please read [#466][bug #466] and [#468][bug #468].
+- [ ] Support UDP protocol such as QUIC or KCP in cluster.
+- [ ] Support H.264+Opus codec for WebRTC.
+- [ ] Support publishing stream by WebRTC.
+- [ ] Support change user to run SRS, [#1111][bug #1111].
+- [ ] Support HLS variant, [#463][bug #463].
+- [ ] Support playing stream by WebRTC.
 
-### Change Logs
+> Remark: About the milestone and product plan, please read ([CN][v1_CN_Product], [EN][v1_EN_Product]) wiki.
 
-### V3 changes
+<a name="history"></a>
+<a name="change-logs"></a>
 
+## V3 changes
+
+* v3.0, 2019-12-30, Fix mp4 security issue, check buffer when required size is variable.
+* <strong>v3.0, 2019-12-29, [3.0 alpha7(3.0.90)][r3.0a7] released. 116356 lines.</strong>
+* v3.0, 2019-12-29, For [#1255][bug #1255], support vhost/domain in query string for HTTP streaming. 3.0.90
+* v3.0, 2019-12-29, For [#299][bug #299], increase dash segment size for avsync issue. 3.0.89
+* v3.0, 2019-12-27, For [#299][bug #299], fix some bugs in dash, it works now. 3.0.88
+* v3.0, 2019-12-27, For [#1544][bug #1544], fix memory leaking for complex error. 3.0.87
+* v3.0, 2019-12-27, Add links for flv.js, hls.js and dash.js.
+* v3.0, 2019-12-26, For [#1105][bug #1105], http server support mp4 range.
+* v3.0, 2019-12-26, For [#1105][bug #1105], dvr mp4 supports playing on Chrome/Safari/Firefox. 3.0.86
+* <strong>v3.0, 2019-12-26, [3.0 alpha6(3.0.85)][r3.0a6] released. 116056 lines.</strong>
+* v3.0, 2019-12-26, For [#1488][bug #1488], pass client ip to http callback. 3.0.85
+* v3.0, 2019-12-25, For [#1537][bug #1537], [#1282][bug #1282], support aarch64 for armv8. 3.0.84
+* v3.0, 2019-12-25, For [#1538][bug #1538], fresh chunk allow fmt=0 or fmt=1. 3.0.83
+* v3.0, 2019-12-25, Remove FFMPEG and NGINX, please use [srs-docker](https://github.com/ossrs/srs-docker) instead. 3.0.82
+* v3.0, 2019-12-25, For [#1537][bug #1537], remove cross-build, not used patches, directly build st.
+* v3.0, 2019-12-24, For [#1508][bug #1508], support chunk length and content in multiple parts.
+* v3.0, 2019-12-23, Merge SRS2 for running srs-librtmp on Windows. 3.0.80
+* v3.0, 2019-12-23, For [#1535][bug #1535], deprecate Adobe FMS/AMS edge token traversing([CN][v3_CN_DRM2], [EN][v3_EN_DRM2]) authentication. 3.0.79
+* v3.0, 2019-12-23, For [#1535][bug #1535], deprecate BWT(bandwidth testing)([CN][v1_CN_BandwidthTestTool], [EN][v1_EN_BandwidthTestTool]). 3.0.78
+* v3.0, 2019-12-23, For [#1535][bug #1535], deprecate Adobe HDS(f4m)([CN][v2_CN_DeliveryHDS], [EN][v2_EN_DeliveryHDS]). 3.0.77
+* v3.0, 2019-12-20, Fix [#1508][bug #1508], http-client support read chunked response. 3.0.76
+* v3.0, 2019-12-20, For [#1508][bug #1508], refactor srs_is_digital, support all zeros.
+* <strong>v3.0, 2019-12-19, [3.0 alpha5(3.0.75)][r3.0a5] released. 115362 lines.</strong>
+* v3.0, 2019-12-19, Refine the RTMP iovs cache increasing to much faster.
+* v3.0, 2019-12-19, Fix [#1524][bug #1524], memory leak for amf0 strict array. 3.0.75
+* v3.0, 2019-12-19, Fix random build failed bug for modules.
+* v3.0, 2019-12-19, Fix [#1520][bug #1520] and [#1223][bug #1223], bug for origin cluster 3+ servers. 3.0.74
+* v3.0, 2019-12-18, For [#1042][bug #1042], add test for RAW AVC protocol.
+* v3.0, 2019-12-18, Detect whether flash enabled for srs-player. 3.0.73
+* v3.0, 2019-12-17, Fix HTTP CORS bug when sending response for OPTIONS. 3.0.72
+* v3.0, 2019-12-17, Enhance HTTP response write for final_request.
+* v3.0, 2019-12-17, Refactor HTTP stream to disconnect client when unpublish.
+* v3.0, 2019-12-17, Fix HTTP-FLV and VOD-FLV conflicting bug.
+* v3.0, 2019-12-17, Refactor HttpResponseWriter.write, default to single text mode.
+* v3.0, 2019-12-16, For [#1042][bug #1042], add test for HTTP protocol.
+* <strong>v3.0, 2019-12-13, [3.0 alpha4(3.0.71)][r3.0a4] released. 112928 lines.</strong>
+* v3.0, 2019-12-12, For [#547][bug #547], [#1506][bug #1506], default hls_dts_directly to on. 3.0.71
+* v3.0, 2019-12-12, SrsPacket supports converting to message, so can be sent by one API.
+* v3.0, 2019-12-11, For [#1042][bug #1042], cover RTMP client/server protocol.
+* v3.0, 2019-12-11, Fix [#1445][bug #1445], limit the createStream recursive depth. 3.0.70
+* v3.0, 2019-12-11, For [#1042][bug #1042], cover RTMP handshake protocol.
+* v3.0, 2019-12-11, Fix [#1229][bug #1229], fix the security risk in logger. 3.0.69
+* v3.0, 2019-12-11, For [#1229][bug #1229], fix the security risk in HDS. 3.0.69
+* v3.0, 2019-12-05, Fix [#1506][bug #1506], support directly turn FLV timestamp to TS DTS. 3.0.68
+* <strong>v3.0, 2019-11-30, [3.0 alpha3(3.0.67)][r3.0a3] released. 110864 lines.</strong>
+* v3.0, 2019-12-01, Fix [#1501][bug #1501], use request coworker for origin cluster. 3.0.67
+* <strong>v3.0, 2019-11-30, [3.0 alpha2(3.0.66)][r3.0a2] released. 110831 lines.</strong>
+* v3.0, 2019-11-30, Fix [#1501][bug #1501], use request coworker for origin cluster. 3.0.66
+* v3.0, 2019-11-30, Random tid for docker. 3.0.65
+* v3.0, 2019-11-30, Refine debug info for edge. 3.0.64
+* v3.0, 2019-10-30, Cover protocol stack RTMP. 3.0.63
+* v3.0, 2019-10-23, Cover JSON codec. 3.0.62
+* v3.0, 2019-10-13, Use http://ossrs.net as homepage.
+* v3.0, 2019-10-10, Cover AMF0 codec. 3.0.61
+* <strong>v3.0, 2019-10-07, [3.0 alpha1(3.0.60)][r3.0a1] released. 107962 lines.</strong>
+* v3.0, 2019-10-06, Support log rotate by init.d command. 3.0.60
+* v3.0, 2019-10-06, We prefer ipv4, only use ipv6 if ipv4 is disabled. 3.0.59
+* v3.0, 2019-10-05, Support systemctl service for CentOS7. 3.0.58
+* v3.0, 2019-10-04, Disable SO_REUSEPORT if not supported. 3.0.57
+* <strong>v3.0, 2019-10-04, [3.0 alpha0(3.0.56)][r3.0a0] released. 107946 lines.</strong>
+* v3.0, 2019-10-04, Support go-oryx rtmplb with [proxy protocol](https://github.com/ossrs/go-oryx/wiki/RtmpProxy). 3.0.56
+* v3.0, 2019-10-03, Fix [#775][bug #775], Support SO_REUSEPORT to improve edge performance. 3.0.54
+* v3.0, 2019-10-03, For [#467][bug #467], Remove KAFKA producer. 3.0.53
+* v3.0, 2019-05-14, Covert Kernel File reader/writer. 3.0.52
+* v3.0, 2019-04-30, Refine typo in files. 3.0.51
+* v3.0, 2019-04-25, Upgrade http-parser from 2.1 to 2.9.2 and cover it. 3.0.50
+* v3.0, 2019-04-22, Refine in time unit. 3.0.49
+* v3.0, 2019-04-07, Cover ST Coroutine and time unit. 3.0.48
+* v3.0, 2019-04-06, Merge [#1304][bug #1304], Fix ST coroutine pull error. 3.0.47
+* v3.0, 2019-04-05, Merge [#1339][bug #1339], Support HTTP-FLV params. 3.0.46
+* v3.0, 2018-11-11, Merge [#1261][bug #1261], Support `_definst_` for Wowza. 3.0.44
+* v3.0, 2018-08-26, SRS [console](https://github.com/ossrs/srs-ngb) support both [Chinese](http://ossrs.net:1985/console/ng_index.html) and [English](http://ossrs.net:1985/console/en_index.html).
+* v3.0, 2018-08-25, Fix [#1093][bug #1093], Support HLS encryption. 3.0.42
+* v3.0, 2018-08-25, Fix [#1051][bug #1051], Drop ts when republishing stream. 3.0.41
+* v3.0, 2018-08-12, For [#1202][bug #1202], Support edge/forward to Aliyun CDN. 3.0.40
+* v3.0, 2018-08-11, For [#910][bug #910], Support HTTP FLV with HTTP callback. 3.0.39
+* v3.0, 2018-08-05, Refine HTTP-FLV latency, support realtime mode.3.0.38
+* v3.0, 2018-08-05, Fix [#1087][bug #1087], Ignore iface without address. 3.0.37
+* v3.0, 2018-08-04, For [#1110][bug #1110], Support params in http callback. 3.0.36
+* v3.0, 2018-08-02, Always use vhost in stream query, the unify uri. 3.0.35
+* v3.0, 2018-08-02, For [#1031][bug #1031], SRS edge support douyu.com. 3.0.34
+* v3.0, 2018-07-22, Replace hex to string to match MIT license. 3.0.33
+* v3.0, 2018-07-22, Replace base64 to match MIT license. 3.0.32
+* v3.0, 2018-07-22, Replace crc32 IEEE and MPEG by pycrc to match MIT license. 3.0.31
+* v3.0, 2018-07-21, Replace crc32 IEEE by golang to match MIT license. 3.0.30
+* v3.0, 2018-02-16, Fix [#464][bug #464], support RTMP origin cluster. 3.0.29
+* v3.0, 2018-02-13, Fix [#1057][bug #1057], switch to simple handshake. 3.0.28
+* v3.0, 2018-02-13, Fix [#1059][bug #1059], merge from 2.0, supports url with vhost in stream. 3.0.27
+* v3.0, 2018-01-01, Fix [#913][bug #913], support complex error. 3.0.26
+* v3.0, 2017-06-04, Fix [#299][bug #299], support experimental MPEG-DASH. 3.0.25
+* v3.0, 2017-05-30, Fix [#821][bug #821], support MP4 file parser. 3.0.24
+* v3.0, 2017-05-30, Fix [#904][bug #904], replace NXJSON(LGPL) with json-parser(BSD). 3.0.23
 * v3.0, 2017-04-16, Fix [#547][bug #547], support HLS audio in TS. 3.0.22
 * v3.0, 2017-03-26, Fix [#820][bug #820], extract service for modules. 3.0.21
 * v3.0, 2017-03-02, Fix [#786][bug #786], simply don't reuse object. 3.0.20
 * v3.0, 2017-03-01, For [#110][bug #110], refine thread object. 3.0.19
-* v3.0, 2017-02-12, Fix [#301][bug #301], User must config the codec in right way for HLS. 3.0.18
-* v3.0, 2017-02-07, fix [#738][bug #738] support DVR general mp4. 3.0.17
-* v3.0, 2017-01-19, for [#742][bug #742] refine source, meta and origin hub. 3.0.16
-* v3.0, 2017-01-17, for [#742][bug #742] refine source, timeout, live cycle. 3.0.15
-* v3.0, 2017-01-11, fix [#735][bug #735] config transform refer_publish invalid. 3.0.14
-* v3.0, 2017-01-06, for [#730][bug #730] support config in/out ack size. 3.0.13
-* v3.0, 2017-01-06, for [#711][bug #711] support perfile for transcode. 3.0.12
-* v3.0, 2017-01-05, patch ST for valgrind and ARM. 3.0.11
+* v3.0, 2017-02-12, Fix [#301][bug #301], user must config the codec in right way for HLS. 3.0.18
+* v3.0, 2017-02-07, fix [#738][bug #738], support DVR general mp4. 3.0.17
+* v3.0, 2017-01-19, for [#742][bug #742], refine source, meta and origin hub. 3.0.16
+* v3.0, 2017-01-17, for [#742][bug #742], refine source, timeout, live cycle. 3.0.15
+* v3.0, 2017-01-11, fix [#735][bug #735], config transform refer_publish invalid. 3.0.14
+* v3.0, 2017-01-06, for [#730][bug #730], support config in/out ack size. 3.0.13
+* v3.0, 2017-01-06, for [#711][bug #711], support perfile for transcode. 3.0.12
+* v3.0, 2017-01-05, Fix [#727][bug #727], patch ST for valgrind and ARM. 3.0.11
 * v3.0, 2017-01-05, for [#324][bug #324], always enable hstrs. 3.0.10
 * v3.0, 2016-12-15, fix [#717][bug #717], [#691][bug #691], http api/static/stream support cors. 3.0.9
-* v3.0, 2016-12-08, support log rotate signal SIGUSR1. 3.0.8
+* v3.0, 2016-12-08, Fix [#105][bug #105], support log rotate signal SIGUSR1. 3.0.8
 * v3.0, 2016-12-07, fix typo and refine grammar. 3.0.7
 * v3.0, 2015-10-23, fix [#467][bug #467], support write log to kafka. 3.0.6
 * v3.0, 2015-10-20, fix [#502][bug #502], support snapshot with http-callback or transcoder. 3.0.5
@@ -213,8 +267,42 @@ Please select your language:
 * v3.0, 2015-08-28, fix [#471][bug #471], api response the width and height. 3.0.2
 * v3.0, 2015-08-25, fix [#367][bug #367], support nginx-rtmp exec. 3.0.1
 
-### V2 changes
+## V2 changes
 
+* v2.0, 2019-12-26, For [#1488][bug #1488], pass client ip to http callback. 2.0.269
+* v2.0, 2019-12-23, Fix [srs-librtmp #22](https://github.com/ossrs/srs-librtmp/issues/22), parse vhost splited by single seperator. 2.0.268
+* v2.0, 2019-12-23, Fix [srs-librtmp #25](https://github.com/ossrs/srs-librtmp/issues/25), build srs-librtmp on windows. 2.0.267
+* v2.0, 2019-12-13, Support openssl versions greater than 1.1.0. 2.0.266
+* <strong>v2.0, 2019-11-29, [2.0 release7(2.0.265)][r2.0r7] released. 86994 lines.</strong>
+* v2.0, 2019-11-29, For [srs-docker](https://github.com/ossrs/srs-docker/tree/master/2.0), install Cherrypy without sudo. 2.0.265
+* v2.0, 2019-04-06, For [#1304][bug #1304], Default HSTRS to on. 2.0.264
+* <strong>v2.0, 2019-04-05, [2.0 release6(2.0.263)][r2.0r6] released. 86994 lines.</strong>
+* v2.0, 2019-04-05, Merge [#1312][bug #1312], Fix GCC7 build error, this statement may fall through. 2.0.263
+* v2.0, 2019-04-05, Merge [#1339][bug #1339], Support HTTP-FLV params. 2.0.262
+* v2.0, 2018-12-01, Merge [#1274][bug #1274], Upgrade to FFMPEG 4.1 and X264 157. 2.0.261
+* v2.0, 2018-11-11, Merge [#1261][bug #1261], Support `_definst_` for Wowza. 2.0.260
+* v2.0, 2018-11-11, Merge [#1263][bug #1263], Fix string trim bug. 2.0.259
+* <strong>v2.0, 2018-10-28, [2.0 release5(2.0.258)][r2.0r5] released. 86916 lines.</strong>
+* v2.0, 2018-10-28, Fix [#1250][bug #1250], Support build on OSX10.14 Mojave. 2.0.258
+* v2.0, 2018-10-08, Merge [#1236][bug #1236], Fix sleep bug in us. 2.0.257
+* v2.0, 2018-10-08, Merge [#1237][bug #1237], Support param for transcoder. 2.0.256
+* <strong>v2.0, 2018-08-12, [2.0 release4(2.0.255)][r2.0r4] released. 86915 lines.</strong>
+* v2.0, 2018-08-12, For [#1202][bug #1202], Support edge/forward to Aliyun CDN. 2.0.255 
+* v2.0, 2018-08-11, For [#910][bug #910], Support HTTP FLV with HTTP callback. 2.0.254
+* v2.0, 2018-08-11, For [#1110][bug #1110], Refine params in http callback. 2.0.253
+* v2.0, 2018-08-05, Refine HTTP-FLV latency, support realtime mode. 2.0.252
+* v2.0, 2018-08-04, For [#1110][bug #1110], Support params in http callback. 2.0.251
+* v2.0, 2018-08-02, For [#1031][bug #1031], SRS edge support douyu.com. 2.0.250
+* v2.0, 2018-07-21, Merge [#1119][bug #1119], fix memory leak. 2.0.249
+* <strong>v2.0, 2018-07-18, [2.0 release3(2.0.248)][r2.0r3] released. 86775 lines.</strong>
+* v2.0, 2018-07-17, Merge [#1176][bug #1176], fix scaned issues. 2.0.248
+* v2.0, 2018-02-28, Merge [#1077][bug #1077], fix crash for edge HLS. 2.0.247
+* v2.0, 2018-02-13, Fix [#1059][bug #1059], support vhost in stream parameters. 2.0.246
+* v2.0, 2018-01-07, Merge [#1045][bug #1045], fix [#1044][bug #1044], TCP connection alive detection. 2.0.245
+* v2.0, 2018-01-04, Merge [#1039][bug #1039], fix bug of init.d script.
+* v2.0, 2018-01-01, Merge [#1033][bug #1033], allow user to add some specific flags. 2.0.244
+* <strong>v2.0, 2017-06-10, [2.0 release2(2.0.243)][r2.0r2] released. 86670 lines.</strong>
+* v2.0, 2017-05-29, Merge [#899][bug #899] to fix [#893][bug #893], ts PES ext length. 2.0.243
 * v2.0, 2017-05-01, Fix [#865][bug #865], shouldn't remove ts/m3u8 when hls_dispose disabled. 2.0.242
 * v2.0, 2017-04-30, Fix [#636][bug #636], FD leak for requesting empty HTTP stream. 2.0.241
 * v2.0, 2017-04-23, Fix [#851][bug #851], HTTP API support number of video frames for FPS. 2.0.240
@@ -424,7 +512,7 @@ Please select your language:
 * v2.0, 2014-10-18, remove supports for OSX(darwin). 2.0.1.
 * v2.0, 2014-10-16, revert github srs README to English. 2.0.0.
 
-### V1 changes
+## V1 changes
 
 * <strong>v1.0, 2014-12-05, [1.0 release(1.0.10)][r1.0r0] released. 59391 lines.</strong>
 * <strong>v1.0, 2014-10-09, [1.0 beta(1.0.0)][r1.0b0] released. 59316 lines.</strong>
@@ -614,8 +702,16 @@ Please select your language:
 * v0.1, 2013-10-18, support rtmp message2chunk protocol(send\_message).
 * v0.1, 2013-10-17, support rtmp chunk2message protocol(recv\_message).
 
-### Releases
+## Releases
 
+* 2019-12-29, [Release v3.0-a7][r3.0a7], 3.0 alpha7, 3.0.90, 116356 lines.
+* 2019-12-26, [Release v3.0-a6][r3.0a6], 3.0 alpha6, 3.0.85, 116056 lines.
+* 2019-12-19, [Release v3.0-a5][r3.0a5], 3.0 alpha5, 3.0.75, 115362 lines.
+* 2019-12-13, [Release v3.0-a4][r3.0a4], 3.0 alpha4, 3.0.71, 112928 lines.
+* 2019-11-30, [Release v3.0-a3][r3.0a3], 3.0 alpha3, 3.0.67, 110864 lines.
+* 2019-11-30, [Release v3.0-a2][r3.0a2], 3.0 alpha2, 3.0.66, 110831 lines.
+* 2019-10-07, [Release v3.0-a1][r3.0a1], 3.0 alpha1, 3.0.60, 107962 lines.
+* 2019-10-04, [Release v3.0-a0][r3.0a0], 3.0 alpha0, 3.0.56, 107946 lines.
 * 2017-03-03, [Release v2.0-r0][r2.0r0], 2.0 release0, 2.0.234, 86373 lines.
 * 2016-11-13, [Release v2.0-b3][r2.0b3], 2.0 beta3, 2.0.223, 86685 lines.
 * 2016-11-09, [Release v2.0-b2][r2.0b2], 2.0 beta2, 2.0.221, 86691 lines.
@@ -633,7 +729,7 @@ Please select your language:
 * 2014-10-09, [Release v0.9.8][r1.0b0], all bug fixed, 1.0.0, 59316 lines.
 * 2014-08-03, [Release v0.9.7][r1.0a7], config utest, all bug fixed. 57432 lines.
 * 2014-07-13, [Release v0.9.6][r1.0a6], core/kernel/rtmp utest, refine bandwidth(as/js/srslibrtmp library). 50029 lines.
-* 2014-06-27, [Release v0.9.5][r1.0a5], refine perf 3k+ clients, edge token traverse, [srs monitor](http://ossrs.net:1977), 30days online. 41573 lines.
+* 2014-06-27, [Release v0.9.5][r1.0a5], refine perf 3k+ clients, edge token traverse, 30days online. 41573 lines.
 * 2014-05-28, [Release v0.9.4][r1.0a4], support heartbeat, tracable log, fix mem leak and bugs. 39200 lines.
 * 2014-05-18, [Release v0.9.3][r1.0a3], support mips, fms origin, json(http-api). 37594 lines.
 * 2014-04-28, [Release v0.9.2][r1.0a2], support [dvr][v3_CN_DVR], android, [edge][v3_CN_Edge]. 35255 lines.
@@ -649,22 +745,25 @@ Please select your language:
 * 2013-10-23, [Release v0.1.0][r0.1], support [rtmp FMLE/FFMPEG publish][v1_CN_DeliveryRTMP], vp6. 8287 lines.
 * 2013-10-17, Created.
 
-### Compare
+## Compare
 
-Compare SRS with other media server, more compare please read Product([CN][v1_CN_Compare]/[EN][v1_EN_Compare]).
+Comparing with other media servers, SRS is much better and stronger, for details please read Product([CN][v1_CN_Compare]/[EN][v1_EN_Compare]).
 
-#### Stream Delivery
+<a name="stream-delivery"></a>
+**Stream Delivery**
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
 |   RTMP        |   Stable  |   Stable  |   Stable  |   Stable  |   Stable  |
 |   HLS         |   Stable  |   Stable  |   X       |   Stable  |   Stable  |
-|   HDS         | Experiment|   X       |   X       |   Stable  |   Stable  |
 |   HTTP FLV    |   Stable  |   X       |   X       |   X       |   X       |
 |   HLS(aonly)  |   Stable  |   X       |   X       |   Stable  |   Stable  |
+|   HDS         | Experiment|   X       |   X       |   Stable  |   Stable  |
+|   MPEG-DASH   | Experiment|   X       |   X       |   X       |   X       |
 |   HTTP Server |   Stable  |   Stable  |   X       |   X       |   Stable  |
 
-#### Cluster
+<a name="cluster"></a>
+**Cluster**
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
@@ -674,9 +773,10 @@ Compare SRS with other media server, more compare please read Product([CN][v1_CN
 |   Reload      |   Stable  |   X       |   X       |   X       |   X       |
 |   Forward     |   Stable  |   X       |   X       |   X       |   X       |
 |   ATC         |   Stable  |   X       |   X       |   X       |   X       |
-|   KAFKA       | Experiment|   X       |   X       |   X       |   X       |
+|   Docker      |   Stable  |   X       |   X       |   X       |   X       |
 
-#### Stream Service
+<a name="stream-service"></a>
+**Stream Service**
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
@@ -692,7 +792,8 @@ Compare SRS with other media server, more compare please read Product([CN][v1_CN
 |   Security    |   Stable  |   Stable  |   X       |   X       |   Stable  |
 | Token Traverse|   Stable  |   X       |   X       |   Stable  |   X       |
 
-#### Efficiency
+<a name="efficiency"></a>
+**Efficiency**
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
@@ -701,7 +802,8 @@ Compare SRS with other media server, more compare please read Product([CN][v1_CN
 |   RTMP Latency|   0.1s    |   3s      |   3s      |   3s      |   3s      |
 |   HLS Latency |   10s     |   30s     |   X       |   30s     |   30s     |
 
-#### Stream Caster
+<a name="stream-caster"></a>
+**Stream Caster**
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
@@ -710,21 +812,24 @@ Compare SRS with other media server, more compare please read Product([CN][v1_CN
 |   Push RTSP   | Experiment|   X       |   Stable  |   X       |   Stable  |
 | Push HTTP FLV | Experiment|   X       |   X       |   X       |   X       |
 
-#### Debug System
+<a name="debug-system"></a>
+**Debug System**
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
 |   BW check    |   Stable  |   X       |   X       |   X       |   X       |
 | Tracable Log  |   Stable  |   X       |   X       |   X       |   X       |
 
-#### Docs
+<a name="docs"></a>
+**Docs**
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
 |   Demos       |   Stable  |   X       |   X       |   X       |   X       |
 |   WIKI(EN+CN) |   Stable  |  EN only  |   X       |   X       |   Stable  |
 
-#### Others 
+<a name="others"></a>
+**Others** 
 
 |   Feature     |   SRS     |   NGINX   | CRTMPD    | FMS       |   WOWZA   |
 |   ----------- |   ------- |   -----   | --------- | --------  |   ------  |
@@ -733,24 +838,25 @@ Compare SRS with other media server, more compare please read Product([CN][v1_CN
 
 Remark:
 
-1. Concurrency: The concurrency of single process.
-1. MultipleProcess: SRS is single process, while [go-oryx][oryx] is a MultipleProcess SRS.
-1. HLS aonly: The HLS audio only streaming delivery.
-1. BW check: The bandwidth check.
-1. Security: To allow or deny stream publish or play.
-1. Reload: Nginx supports reload, but not nginx-rtmp.
+1. Concurrency: We only benchmark the concurrency of single process.
+1. MultipleProcess: SRS supports multiple processes by [go-oryx][oryx].
+1. HLS aonly: HLS supports audio only mode without video stream.
+1. BW check: The bandwidth check feature is used to detect the bandwidth between server and client.
+1. Security: The security includes access control, token authentication and referer check.
+1. Reload: SRS and Nginx supports reload, but nginx-rtmp doesn't.
 
-### Performance
+## Performance
 
-Performance benchmark history, on virtual box.
+The performance benchmark data and corelative commits are listed here.
 
-* See also: [Performance for x86/x64 Test Guide][v1_CN_Performance]
-* See also: [Performance for RaspberryPi][v1_CN_RaspberryPi]
-* About multiple-process performance, read [go-oryx][oryx].
+* See also: [Performance for x86/x64 Test Guide][v1_CN_Performance].
+* See also: [Performance for RaspberryPi][v1_CN_RaspberryPi].
+* For multiple processes performance, read [#775: REUSEPORT][bug #775] or OriginCluster([CN][v3_EN_OriginCluster]/[EN][v3_EN_OriginCluster]) or [go-oryx][oryx].
 
-#### Play RTMP benchmark
+<a name="play-rtmp-benchmark"></a>
+**Play RTMP benchmark**
 
-The play RTMP benchmark by [SB][srs-bench]:
+The data for playing RTMP was benchmarked by [SB][srs-bench]:
 
 
 |   Update      |    SRS    |    Clients    |     Type      |    CPU    |  Memory   | Commit        |
@@ -768,9 +874,10 @@ The play RTMP benchmark by [SB][srs-bench]:
 |   2014-12-05  |   2.0.57  |   9.0k(9000)  |   players     |   90%     |   468MB   |   [code][p11] |
 |   2014-12-07  |   2.0.67  |   10k(10000)  |   players     |   95%     |   656MB   |   [code][p12] |
 
-#### Publish RTMP benchmark
+<a name="publish-rtmp-benchmark"></a>
+**Publish RTMP benchmark**
 
-The publish RTMP benchmark by [SB][srs-bench]:
+The data for publishing RTMP was benchmarked by [SB][srs-bench]:
 
 |   Update      |    SRS    |    Clients    |     Type      |    CPU    |  Memory   | Commit        |
 | ------------- | --------- | ------------- | ------------- | --------- | --------  | ------------  |
@@ -784,9 +891,10 @@ The publish RTMP benchmark by [SB][srs-bench]:
 |   2014-12-04  |   2.0.51  |   2.5k(2500)  |   publishers  |   91%     |   259MB   |   [code][p4]  |
 |   2014-12-04  |   2.0.52  |   4.0k(4000)  |   publishers  |   80%     |   331MB   |   [code][p5]  |
 
-#### Play HTTP FLV benchmark
+<a name="play-http-flv-benchmark"></a>
+**Play HTTP FLV benchmark**
 
-The play HTTP FLV benchmark by [SB][srs-bench]:
+The data for playing HTTP FLV was benchmarked by [SB][srs-bench]:
 
 
 |   Update      |    SRS    |    Clients    |     Type      |    CPU    |  Memory   | Commit        |
@@ -797,7 +905,8 @@ The play HTTP FLV benchmark by [SB][srs-bench]:
 |   2014-05-24  |   2.0.170 |   3.0k(3000)  |   players     |   89%     |   96MB    |   [code][p19] |
 |   2014-05-25  |   2.0.171 |   6.0k(6000)  |   players     |   84%     |   297MB   |   [code][p20] |
 
-#### Latency benchmark
+<a name="latency-benchmark"></a>
+**Latency benchmark**
 
 The latency between encoder and player with realtime config([CN][v3_CN_LowLatency], [EN][v3_EN_LowLatency]):
 |   
@@ -808,13 +917,16 @@ The latency between encoder and player with realtime config([CN][v3_CN_LowLatenc
 |   2014-12-12  |   2.0.70  |[0.1s][p13]|[0.4s][p14]|   1.0s    |   0.9s    |
 |   2014-12-16  |   2.0.72  |   0.1s    |   0.4s    |[0.8s][p15]|[0.6s][p16]|
 
-We use FMLE as encoder for benchmark. The latency of server is 0.1s+, 
-and the bottleneck is the encoder. For more information, read 
+> 2018-08-05, [c45f72e](https://github.com/ossrs/srs/commit/c45f72ef7bac9c7cf85b9125fc9e3aafd53f396f), Refine HTTP-FLV latency, support realtime mode. 2.0.252
+
+We used FMLE as encoder for benchmark. The latency of server was 0.1s+, 
+and the bottleneck was the encoder. For more information, read 
 [bug #257][bug #257-c0].
 
-#### HLS overhead
+<a name="hls-overhead"></a>
+**HLS overhead**
 
-About the HLS overhead of SRS, we compare the overhead to FLV by remux the HLS to FLV by ffmpeg.
+About the overhead of HLS overhead, we compared FFMPEG and SRS.
 
 | Bitrate   |   Duration    |   FLV(KB)     |   HLS(KB)     |   Overhead    |
 | -------   |   --------    |   -------     |   --------    |   ---------   |
@@ -838,24 +950,25 @@ About the HLS overhead of SRS, we compare the overhead to FLV by remux the HLS t
 
 The HLS overhead is calc by: (HLS - FLV) / FLV * 100%.
 
-The overhead is larger than this benchmark(48kbps audio is best overhead), for we fix the [#512][bug #512].
+The overhead should be larger than this benchmark(48kbps audio is best overhead), for we fix the [#512][bug #512].
 
 ## Architecture
 
-SRS always use the most simple architecture to support complex transaction.
+SRS always use the simplest architecture to solve complex domain problems.
+
 * System arch: the system structure and arch.
 * Modularity arch: the main modularity of SRS.
 * Stream arch: the stream dispatch arch of SRS.
 
-### System Architecture
+## System Architecture
 
 ```
 +------------------------------------------------------+
 |                    Application                       |
 |            Origin/Edge/HTTP-FLV/StreamCaster         |
 +---------------+---------------+-----------+----------+
-|   RAW API/    |     EXEC/     |    DVR/   | FLV/TS/  |
-|   API/hook    |   Transcoder  |  HLS/HDS  | AMF0/JSON|
+|   RAW API/    |     EXEC/     |  DVR/HLS  | FLV/TS/  |
+|   API/hook    |   Transcoder  |  HDS/DASH | AMF0/JSON|
 +---------------+---------------+-----------+ RTMP/RTSP|
 |  http-parser  |  FFMPEG/x264  |  NGINX/ts | protocol |
 +---------------+---------------+-----------+----------+
@@ -865,7 +978,7 @@ SRS always use the most simple architecture to support complex transaction.
 +------------------------------------------------------+
 ```
 
-### Modularity Architecture
+## Modularity Architecture
 
 ```
 +------------------------------------------------------+
@@ -885,9 +998,9 @@ SRS always use the most simple architecture to support complex transaction.
 
 Remark:
 
-1. Modules: SRS support embeded modularity, read [modules][modules].
+1. Modules: SRS supports code-level modularity, read [modules][modules].
 
-### Stream Architecture
+## Stream Architecture
 
 ```
 +---------+              +----------+
@@ -896,6 +1009,7 @@ Remark:
 +----------------------+-------------------------+----------------+
 |     Input            | SRS(Simple RTMP Server) |     Output     |
 +----------------------+-------------------------+----------------+
+|                      |   +-> DASH -------------+-> DASH player  |
 |    Encoder(1)        |   +-> RTMP/HDS  --------+-> Flash player |
 |  (FMLE,FFMPEG, -rtmp-+->-+-> HLS/HTTP ---------+-> M3U8 player  |
 |  Flash,XSPLIT,       |   +-> FLV/MP3/Aac/Ts ---+-> HTTP player  |
@@ -922,54 +1036,46 @@ Remark:
 
 Remark:
 
-1. Encoder: Encoder must push RTMP stream to SRS server.
-1. MediaSource: Any media source, which can be ingest by ffmpeg.
-1. Ingester: SRS fork a ffmpeg(or application) to ingest something to rtmp to SRS. Read [Ingest][v1_CN_Ingest].
-1. Streamer: SRS listen to remux some protocol to rtmp to SRS. Read [Streamer][v2_CN_Streamer].
-1. EXEC: SRS exec external application when got event, read [ng-exec][v3_CN_NgExec].
+1. Encoder: Encoder pushs RTMP stream to SRS.
+1. MediaSource: Supports any media source, ingesting by ffmpeg.
+1. Ingester: Forks a ffmpeg(or other tools) to ingest as rtmp to SRS, please read [Ingest][v1_CN_Ingest].
+1. Streamer: Remuxs other protocols to RTMP, please read [Streamer][v2_CN_Streamer].
+1. EXEC: Like NGINX-RTMP, EXEC forks external tools for events, please read [ng-exec][v3_CN_NgExec].
 
-## Tips
-
-Other tips...
-
-### AUTHORS
+## AUTHORS
 
 There are two types of people that have contributed to the SRS project:
-* AUTHORS: Contribute important features. Names of all 
-PRIMARY response in NetConnection.connect and metadata. 
-* CONTRIBUTORS: Submit patches, report bugs, add translations, help answer 
-newbie questions, and generally make SRS that much better.
 
-About all PRIMARY, AUTHORS and CONTRIBUTORS, read [AUTHORS.txt][authors].
+* AUTHORS: Contribute important features. Names of all authors responsed in NetConnection.connect and metadata. 
+* CONTRIBUTORS: Submit patches, report bugs, add translations, help answer newbie questions, and generally make SRS much better.
+
+About all AUTHORS and CONTRIBUTORS, read [AUTHORS.txt][authors].
 
 A big THANK YOU goes to:
+
 * All friends of SRS for [big supports][bigthanks].
 * Genes amd Mabbott for creating [st][st]([state-threads][st2]).
 * Michael Talyanksy for introducing us to use st.
 * Roman Arutyunyan for creating [nginx-rtmp][nginx-rtmp] for SRS to refer to. 
 * Joyent for creating [http-parser][http-parser] for http-api for SRS.
 * Igor Sysoev for creating [nginx][nginx] for SRS to refer to.
-* [FFMPEG][FFMPEG] and [libx264][libx264] group for SRS to use to transcode.
+* [FFMPEG][FFMPEG] and [libx264][libx264] group for SRS to use as transcoder.
 * Guido van Rossum for creating Python for api-server for SRS.
 
-### Mirrors
+## Mirrors
+
+OSChina: [https://gitee.com/winlinvip/srs.oschina][oschina], the GIT usage([CN][v1_CN_Git], [EN][v1_EN_Git])
+
+```
+git clone https://gitee.com/winlinvip/srs.oschina.git
+```
+
+> Remark: For users in China, recomment to use mirror from CSDN or OSChina, because they are much faster.
 
 Github: [https://github.com/ossrs/srs][srs], the GIT usage([CN][v1_CN_Git], [EN][v1_EN_Git])
 
 ```
 git clone https://github.com/ossrs/srs.git
-```
-
-CSDN: [https://code.csdn.net/winlinvip/srs-csdn][csdn], the GIT usage([CN][v1_CN_Git], [EN][v1_EN_Git])
-
-```
-git clone https://code.csdn.net/winlinvip/srs-csdn.git
-```
-
-OSChina: [http://git.oschina.net/winlinvip/srs.oschina][oschina], the GIT usage([CN][v1_CN_Git], [EN][v1_EN_Git])
-
-```
-git clone https://git.oschina.net/winlinvip/srs.oschina.git
 ```
 
 Gitlab: [https://gitlab.com/winlinvip/srs-gitlab][gitlab], the GIT usage([CN][v1_CN_Git], [EN][v1_EN_Git])
@@ -978,12 +1084,12 @@ Gitlab: [https://gitlab.com/winlinvip/srs-gitlab][gitlab], the GIT usage([CN][v1
 git clone https://gitlab.com/winlinvip/srs-gitlab.git
 ```
 
-### System Requirements
+## System Requirements
 
 Supported operating systems and hardware:
-* All Linux , both 32 and 64 bits
-* Apple OSX(Darwin), both 32 and 64bits.
-* All hardware with x86/x86_64/arm/mips cpu.
+
+* All Linux, both 32 and 64 bits
+* Other OS, such as Windows, please use [docker][docker-srs3].
 
 Beijing, 2013.10<br/>
 Winlin
@@ -1027,7 +1133,7 @@ Winlin
 [libx264]: http://www.videolan.org/
 [srs]: https://github.com/ossrs/srs
 [csdn]: https://code.csdn.net/winlinvip/srs-csdn
-[oschina]: http://git.oschina.net/winlinvip/srs.oschina
+[oschina]: https://gitee.com/winlinvip/srs.oschina
 [srs-dolphin]: https://github.com/ossrs/srs-dolphin
 [oryx]: https://github.com/ossrs/go-oryx
 [srs-bench]: https://github.com/ossrs/srs-bench
@@ -1037,6 +1143,8 @@ Winlin
 [console]: http://ossrs.net:1985/console
 [player]: http://ossrs.net/players/srs_player.html
 [modules]: https://github.com/ossrs/srs/blob/develop/trunk/modules/readme.txt
+[docker-srs3]: https://github.com/ossrs/srs-docker#srs3
+[docker-dev]: https://github.com/ossrs/srs-docker/tree/dev#usage
 
 [v1_CN_Git]: https://github.com/ossrs/srs/wiki/v1_CN_Git
 [v1_EN_Git]: https://github.com/ossrs/srs/wiki/v1_EN_Git
@@ -1044,6 +1152,8 @@ Winlin
 [v1_EN_SampleRTMP]: https://github.com/ossrs/srs/wiki/v1_EN_SampleRTMP
 [v3_CN_SampleRTMPCluster]: https://github.com/ossrs/srs/wiki/v3_CN_SampleRTMPCluster
 [v3_EN_SampleRTMPCluster]: https://github.com/ossrs/srs/wiki/v3_EN_SampleRTMPCluster
+[v3_CN_SampleOriginCluster]: https://github.com/ossrs/srs/wiki/v3_CN_SampleOriginCluster
+[v3_EN_SampleOriginCluster]: https://github.com/ossrs/srs/wiki/v3_EN_SampleOriginCluster
 [v3_CN_SampleHLS]: https://github.com/ossrs/srs/wiki/v3_CN_SampleHLS
 [v3_EN_SampleHLS]: https://github.com/ossrs/srs/wiki/v3_EN_SampleHLS
 [v3_CN_SampleTranscode2HLS]: https://github.com/ossrs/srs/wiki/v3_CN_SampleTranscode2HLS
@@ -1062,21 +1172,29 @@ Winlin
 [v3_EN_SampleHTTP]: https://github.com/ossrs/srs/wiki/v3_EN_SampleHTTP
 [v1_CN_SampleDemo]: https://github.com/ossrs/srs/wiki/v1_CN_SampleDemo
 [v1_EN_SampleDemo]: https://github.com/ossrs/srs/wiki/v1_EN_SampleDemo
+[v3_CN_OriginCluster]: https://github.com/ossrs/srs/wiki/v3_CN_OriginCluster
+[v3_EN_OriginCluster]: https://github.com/ossrs/srs/wiki/v3_EN_OriginCluster
 [v3_CN_SrsLibrtmp2]: https://github.com/ossrs/srs/wiki/v3_CN_SrsLibrtmp#publish-h264-raw-data
 [v3_EN_SrsLibrtmp2]: https://github.com/ossrs/srs/wiki/v3_EN_SrsLibrtmp#publish-h264-raw-data
+[v3_CN_REUSEPORT]: https://github.com/ossrs/srs/wiki/v3_CN_REUSEPORT
+[v3_EN_REUSEPORT]: https://github.com/ossrs/srs/wiki/v3_EN_REUSEPORT
 [v1_CN_Sample]: https://github.com/ossrs/srs/wiki/v1_CN_Sample
 [v1_EN_Sample]: https://github.com/ossrs/srs/wiki/v1_EN_Sample
 [v1_CN_Product]: https://github.com/ossrs/srs/wiki/v1_CN_Product
 [v1_EN_Product]: https://github.com/ossrs/srs/wiki/v1_EN_Product
-[v1-wiki-cn]: https://github.com/ossrs/srs/wiki/v1-wiki-cn
-[v1-wiki-en]: https://github.com/ossrs/srs/wiki/v1-wiki-en
-[v2-wiki-cn]: https://github.com/ossrs/srs/wiki/v2-wiki-cn
-[v2-wiki-en]: https://github.com/ossrs/srs/wiki/v2-wiki-en
+[v1-wiki-cn]: https://github.com/ossrs/srs/wiki/v1_CN_Home
+[v1-wiki-en]: https://github.com/ossrs/srs/wiki/v1_EN_Home
+[v2-wiki-cn]: https://github.com/ossrs/srs/wiki/v2_CN_Home
+[v2-wiki-en]: https://github.com/ossrs/srs/wiki/v2_EN_Home
+[v1_CN_Home]: https://github.com/ossrs/srs/wiki/v1_CN_Home
+[v1_EN_Home]: https://github.com/ossrs/srs/wiki/v1_EN_Home
+[v2_CN_Home]: https://github.com/ossrs/srs/wiki/v2_CN_Home
+[v2_EN_Home]: https://github.com/ossrs/srs/wiki/v2_EN_Home
 [v3_CN_Home]: https://github.com/ossrs/srs/wiki/v3_CN_Home
 [v3_EN_Home]: https://github.com/ossrs/srs/wiki/v3_EN_Home
 [donation0]: http://winlinvip.github.io/srs.release/donation/index.html
-[donation1]: http://www.ossrs.net/srs.release/donation/index.html
-[donation2]: http://www.ossrs.net/srs.release/donation/paypal.html
+[donation1]: http://ossrs.net/srs.release/donation/index.html
+[donation2]: http://ossrs.net/srs.release/donation/paypal.html
 [donations]: https://github.com/ossrs/srs/blob/develop/DONATIONS.txt
 
 [v1_CN_Compare]: https://github.com/ossrs/srs/wiki/v1_CN_Compare
@@ -1403,6 +1521,31 @@ Winlin
 [bug #851]: https://github.com/ossrs/srs/issues/851
 [bug #636]: https://github.com/ossrs/srs/issues/636
 [bug #865]: https://github.com/ossrs/srs/issues/865
+[bug #893]: https://github.com/ossrs/srs/issues/893
+[bug #899]: https://github.com/ossrs/srs/issues/899
+[bug #1033]: https://github.com/ossrs/srs/issues/1033
+[bug #1039]: https://github.com/ossrs/srs/issues/1039
+[bug #1044]: https://github.com/ossrs/srs/issues/1044
+[bug #1045]: https://github.com/ossrs/srs/issues/1045
+[bug #1059]: https://github.com/ossrs/srs/issues/1059
+[bug #1077]: https://github.com/ossrs/srs/issues/1077
+[bug #1176]: https://github.com/ossrs/srs/issues/1176
+[bug #1119]: https://github.com/ossrs/srs/issues/1119
+[bug #1031]: https://github.com/ossrs/srs/issues/1031
+[bug #1110]: https://github.com/ossrs/srs/issues/1110
+[bug #910]: https://github.com/ossrs/srs/issues/910
+[bug #1202]: https://github.com/ossrs/srs/issues/1202
+[bug #1237]: https://github.com/ossrs/srs/issues/1237
+[bug #1236]: https://github.com/ossrs/srs/issues/1236
+[bug #1250]: https://github.com/ossrs/srs/issues/1250
+[bug #1263]: https://github.com/ossrs/srs/issues/1263
+[bug #1261]: https://github.com/ossrs/srs/issues/1261
+[bug #1274]: https://github.com/ossrs/srs/pull/1274
+[bug #1339]: https://github.com/ossrs/srs/pull/1339
+[bug #1312]: https://github.com/ossrs/srs/pull/1312
+[bug #1304]: https://github.com/ossrs/srs/pull/1304
+[bug #1524]: https://github.com/ossrs/srs/issues/1524
+[bug #1488]: https://github.com/ossrs/srs/issues/1488
 [bug #xxxxxxxxxx]: https://github.com/ossrs/srs/issues/xxxxxxxxxx
 
 [bug #735]: https://github.com/ossrs/srs/issues/735
@@ -1411,10 +1554,54 @@ Winlin
 [bug #786]: https://github.com/ossrs/srs/issues/786
 [bug #820]: https://github.com/ossrs/srs/issues/820
 [bug #547]: https://github.com/ossrs/srs/issues/547
+[bug #904]: https://github.com/ossrs/srs/issues/904
+[bug #821]: https://github.com/ossrs/srs/issues/821
+[bug #913]: https://github.com/ossrs/srs/issues/913
+[bug #460]: https://github.com/ossrs/srs/issues/460
+[bug #775]: https://github.com/ossrs/srs/issues/775
+[bug #1057]: https://github.com/ossrs/srs/issues/1057
+[bug #105]: https://github.com/ossrs/srs/issues/105
+[bug #727]: https://github.com/ossrs/srs/issues/727
+[bug #1087]: https://github.com/ossrs/srs/issues/1087
+[bug #1051]: https://github.com/ossrs/srs/issues/1051
+[bug #1093]: https://github.com/ossrs/srs/issues/1093
+[bug #1501]: https://github.com/ossrs/srs/issues/1501
+[bug #1229]: https://github.com/ossrs/srs/issues/1229
+[bug #1042]: https://github.com/ossrs/srs/issues/1042
+[bug #1445]: https://github.com/ossrs/srs/issues/1445
+[bug #1506]: https://github.com/ossrs/srs/issues/1506
+[bug #1520]: https://github.com/ossrs/srs/issues/1520
+[bug #1223]: https://github.com/ossrs/srs/issues/1223
+[bug #1508]: https://github.com/ossrs/srs/issues/1508
+[bug #1535]: https://github.com/ossrs/srs/issues/1535
+[bug #1537]: https://github.com/ossrs/srs/issues/1537
+[bug #1538]: https://github.com/ossrs/srs/issues/1538
+[bug #1282]: https://github.com/ossrs/srs/issues/1282
+[bug #1105]: https://github.com/ossrs/srs/issues/1105
+[bug #1544]: https://github.com/ossrs/srs/issues/1544
+[bug #1255]: https://github.com/ossrs/srs/issues/1255
+[bug #xxxxxxxxxxxxx]: https://github.com/ossrs/srs/issues/xxxxxxxxxxxxx
+
+[bug #1111]: https://github.com/ossrs/srs/issues/1111
+[bug #463]: https://github.com/ossrs/srs/issues/463
 [bug #xxxxxxxxxxxxx]: https://github.com/ossrs/srs/issues/xxxxxxxxxxxxx
 
 [exo #828]: https://github.com/google/ExoPlayer/pull/828
 
+[r3.0a7]: https://github.com/ossrs/srs/releases/tag/v3.0-a7
+[r3.0a6]: https://github.com/ossrs/srs/releases/tag/v3.0-a6
+[r3.0a5]: https://github.com/ossrs/srs/releases/tag/v3.0-a5
+[r3.0a4]: https://github.com/ossrs/srs/releases/tag/v3.0-a4
+[r3.0a3]: https://github.com/ossrs/srs/releases/tag/v3.0-a3
+[r3.0a2]: https://github.com/ossrs/srs/releases/tag/v3.0-a2
+[r3.0a1]: https://github.com/ossrs/srs/releases/tag/v3.0-a1
+[r3.0a0]: https://github.com/ossrs/srs/releases/tag/v3.0-a0
+[r2.0r7]: https://github.com/ossrs/srs/releases/tag/v2.0-r7
+[r2.0r6]: https://github.com/ossrs/srs/releases/tag/v2.0-r6
+[r2.0r5]: https://github.com/ossrs/srs/releases/tag/v2.0-r5
+[r2.0r4]: https://github.com/ossrs/srs/releases/tag/v2.0-r4
+[r2.0r3]: https://github.com/ossrs/srs/releases/tag/v2.0-r3
+[r2.0r2]: https://github.com/ossrs/srs/releases/tag/v2.0-r2
 [r2.0r1]: https://github.com/ossrs/srs/releases/tag/v2.0-r1
 [r2.0r0]: https://github.com/ossrs/srs/releases/tag/v2.0-r0
 [r2.0b4]: https://github.com/ossrs/srs/releases/tag/v2.0-b4
@@ -1451,8 +1638,13 @@ Winlin
 
 
 [contact]: https://github.com/ossrs/srs/wiki/v1_CN_Contact
+[v1_CN_Contact]: https://github.com/ossrs/srs/wiki/v1_CN_Contact
+[v1_EN_Contact]: https://github.com/ossrs/srs/wiki/v1_EN_Contact
 [more0]: http://winlinvip.github.io/srs.release/releases/
-[more1]: http://www.ossrs.net/srs.release/releases/
+[more1]: http://ossrs.net/srs.release/releases/
+
+[LICENSE]: https://github.com/ossrs/srs/blob/develop/LICENSE
+[LicenseMixing]: https://github.com/ossrs/srs/wiki/LicenseMixing
 
 [srs_CN]: https://github.com/ossrs/srs/wiki/v3_CN_Home
 [srs_EN]: https://github.com/ossrs/srs/wiki/v3_EN_Home
@@ -1460,6 +1652,6 @@ Winlin
 [branch2]: https://github.com/ossrs/srs/tree/2.0release
 [release2]: https://github.com/ossrs/srs/wiki/v1_CN_Product#release20
 [release3]: https://github.com/ossrs/srs/wiki/v1_CN_Product#release30
-[centos0]: http://winlinvip.github.io/srs.release/releases/files/SRS-CentOS6-x86_64-2.0.239.zip
-[centos1]: http://www.ossrs.net/srs.release/releases/files/SRS-CentOS6-x86_64-2.0.239.zip
+[centos0]: http://winlinvip.github.io/srs.release/releases/files/SRS-CentOS6-x86_64-3.0.56.zip
+[centos1]: http://ossrs.net/srs.release/releases/files/SRS-CentOS6-x86_64-3.0.56.zip
 

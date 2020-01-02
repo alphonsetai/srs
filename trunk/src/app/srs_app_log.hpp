@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2017 OSSRS(winlin)
+ * Copyright (c) 2013-2020 Winlin
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -32,43 +32,40 @@
 #include <srs_app_reload.hpp>
 #include <srs_service_log.hpp>
 
-/**
- * we use memory/disk cache and donot flush when write log.
- * it's ok to use it without config, which will log to console, and default trace level.
- * when you want to use different level, override this classs, set the protected _level.
- */
+// Use memory/disk cache and donot flush when write log.
+// it's ok to use it without config, which will log to console, and default trace level.
+// when you want to use different level, override this classs, set the protected _level.
 class SrsFastLog : public ISrsLog, public ISrsReloadHandler
 {
-// for utest to override
-protected:
-    // defined in SrsLogLevel.
+private:
+    // Defined in SrsLogLevel.
     SrsLogLevel level;
 private:
     char* log_data;
-    // log to file if specified srs_log_file
+    // Log to file if specified srs_log_file
     int fd;
-    // whether log to file tank
+    // Whether log to file tank
     bool log_to_file_tank;
-    // whether use utc time.
+    // Whether use utc time.
     bool utc;
 public:
     SrsFastLog();
     virtual ~SrsFastLog();
-// interface ISrsLog
+// Interface ISrsLog
 public:
-    virtual int initialize();
+    virtual srs_error_t initialize();
     virtual void reopen();
     virtual void verbose(const char* tag, int context_id, const char* fmt, ...);
     virtual void info(const char* tag, int context_id, const char* fmt, ...);
     virtual void trace(const char* tag, int context_id, const char* fmt, ...);
     virtual void warn(const char* tag, int context_id, const char* fmt, ...);
     virtual void error(const char* tag, int context_id, const char* fmt, ...);
-// interface ISrsReloadHandler.
+// Interface ISrsReloadHandler.
 public:
-    virtual int on_reload_utc_time();
-    virtual int on_reload_log_tank();
-    virtual int on_reload_log_level();
-    virtual int on_reload_log_file();
+    virtual srs_error_t on_reload_utc_time();
+    virtual srs_error_t on_reload_log_tank();
+    virtual srs_error_t on_reload_log_level();
+    virtual srs_error_t on_reload_log_file();
 private:
     virtual void write_log(int& fd, char* str_log, int size, int level);
     virtual void open_log_file();
